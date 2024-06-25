@@ -16,6 +16,9 @@ var reservasi = require("./Tool/reservasi");
 var grafikReservasi = require("./Tool/grafikReservasi");
 var regrinding = require("./Tool/regrinding");
 var grafikRegrinding = require("./Tool/grafikReg");
+var planMonth = require("./cms/planMotnh");
+var historySchedule = require("./cms/history");
+var historyKuras = require("./cms/historyKuras");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -33,4 +36,7 @@ router.use("/reservasi", reservasi);
 router.use("/grafikreservasi", grafikReservasi);
 router.use("/regrinding", regrinding);
 router.use("/grafikRegrinding", grafikRegrinding);
+router.use("/planMonth", planMonth);
+router.use("/historySchedule", historySchedule);
+router.use("/historyKuras", historyKuras);
 module.exports = router;

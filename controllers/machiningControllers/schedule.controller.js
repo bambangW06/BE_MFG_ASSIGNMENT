@@ -81,7 +81,7 @@ module.exports = {
         scheduleData.forEach((row) => {
           row.last_krs = moment(row.last_krs)
             .tz("Asia/Jakarta")
-            .format("YYYY-MM-DD");
+            .format("DD-MM-YYYY");
         });
       }
 
@@ -101,7 +101,7 @@ module.exports = {
   editScheduleKuras: async (req, res) => {
     try {
       const id = req.params.id;
-      console.log("id", id);
+      // console.log("idparam", id);
       const {
         line_id,
         line_nm,
@@ -112,17 +112,17 @@ module.exports = {
         periodVal,
         periodNm,
       } = req.body;
-      console.log(
-        "edit",
-        line_id,
-        line_nm,
-        machine_id,
-        machines,
-        last_krs,
-        shift,
-        periodVal,
-        periodNm
-      );
+      // console.log(
+      //   "edit",
+      //   line_id,
+      //   line_nm,
+      //   machine_id,
+      //   machines,
+      //   last_krs,
+      //   shift,
+      //   periodVal,
+      //   periodNm
+      // );
 
       if (
         !id ||

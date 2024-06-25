@@ -1,6 +1,6 @@
 const {
   getPlanSchedule,
-} = require("../../controllers/machiningControllers/plan.controller");
+} = require("../../controllers/machiningControllers/generateSchedule.controller.js");
 
 var router = require("express").Router();
 

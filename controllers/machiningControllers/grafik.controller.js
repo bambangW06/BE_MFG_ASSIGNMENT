@@ -11,10 +11,10 @@ module.exports = {
         .format("YYYY-MM-DD");
       const machine_id = req.query.machine_id;
       const param_id = req.query.param_id;
-      console.log("ini", startDate, endDate, machine_id);
+      // console.log("ini", startDate, endDate, machine_id);
       // Buat URL dengan parameter-query
       const url = `http://103.190.28.222:3300/api/v1/operational/parameter/graph?start=${startDate}&end=${endDate}&machines_id=${machine_id}&parameters_id=${param_id}`;
-      console.log("iki lho", url);
+      // console.log("iki lho", url);
       // Lakukan permintaan ke backend menggunakan URL yang telah dibuat
       const response = await axios.get(url, {
         headers: {
@@ -25,7 +25,7 @@ module.exports = {
 
       const data = response.data;
       // Log hasil di sini
-      console.log("Received data:", data);
+      // console.log("Received data:", data);
       res.status(200).json({
         message: "Success to Get Data",
         data: data,
