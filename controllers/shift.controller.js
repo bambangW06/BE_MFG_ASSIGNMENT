@@ -35,7 +35,7 @@ module.exports = {
       const moment = require("moment-timezone");
       // Query untuk mendapatkan tanggal hari ini dalam zona waktu 'Asia/Jakarta'
       const q = `SELECT today, current_shift FROM tb_m_current_shift WHERE today = date(timezone('Asia/Jakarta', CURRENT_TIMESTAMP));`;
-      console.log("Query yang dijalankan:", q);
+      // console.log("Query yang dijalankan:", q);
 
       const client = await database.connect();
       const userDataQuery = await client.query(q);

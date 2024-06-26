@@ -4,8 +4,8 @@ var moment = require("moment-timezone");
 module.exports = {
   addRegrinding: async (req, res) => {
     try {
-      const { reservasiDate, morning, afterlunch } = req.body;
-      console.log(reservasiDate, morning, afterlunch);
+      const { reservasiDate, morning, afterlunch, shift } = req.body;
+      console.log(reservasiDate, morning, afterlunch, shift);
 
       const parsedMorning =
         morning !== undefined && morning !== "" ? parseInt(morning, 10) : null;
@@ -14,18 +14,22 @@ module.exports = {
           ? parseInt(afterlunch, 10)
           : null;
 
-      const q = `INSERT INTO tb_m_regrinding (reg_dt, morning_ses, afterlunch_ses)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (reg_dt) 
-        DO UPDATE SET
-            morning_ses = COALESCE(EXCLUDED.morning_ses, tb_m_regrinding.morning_ses),
-            afterlunch_ses = COALESCE(EXCLUDED.afterlunch_ses, tb_m_regrinding.afterlunch_ses);`;
+      const q = `
+          INSERT INTO tb_m_regrinding (reg_dt, morning_ses, afterlunch_ses, shift)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (reg_dt, shift) 
+          DO UPDATE SET
+              morning_ses = COALESCE(EXCLUDED.morning_ses, tb_m_regrinding.morning_ses),
+              afterlunch_ses = COALESCE(EXCLUDED.afterlunch_ses, tb_m_regrinding.afterlunch_ses)
+          RETURNING *;
+          `;
 
       const client = await database.connect();
       const userDataQuery = await client.query(q, [
         reservasiDate,
         parsedMorning,
         parsedAfterlunch,
+        shift,
       ]);
       const userData = userDataQuery.rows;
       client.release();
@@ -44,10 +48,11 @@ module.exports = {
 
   getRegrinding: async (req, res) => {
     try {
+      const shift = req.query.shift;
       const regDate = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-      const q = `SELECT * FROM tb_m_regrinding WHERE reg_dt = $1;`;
+      const q = `SELECT * FROM tb_m_regrinding WHERE reg_dt = $1 AND shift = $2;`;
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [regDate]);
+      const userDataQuery = await client.query(q, [regDate, shift]);
       const userData = userDataQuery.rows;
       client.release();
       if (userData.length > 0) {

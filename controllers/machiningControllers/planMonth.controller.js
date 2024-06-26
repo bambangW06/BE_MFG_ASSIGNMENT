@@ -28,7 +28,7 @@ module.exports = {
             .format("DD-MM-YYYY");
         });
       }
-      console.log(result.rows);
+      // console.log(result.rows);
       res.status(200).json({
         message: "Success to Get Plan for Month",
         data: result.rows,
@@ -100,6 +100,7 @@ module.exports = {
         shift,
         reason
       );
+
       // Cek apakah ID ada, jika tidak maka kembalikan error
       if (!id) {
         return res.status(400).json({ message: "ID diperlukan untuk edit" });
@@ -142,21 +143,74 @@ module.exports = {
       // Tambahkan id ke values array untuk digunakan dalam klausa WHERE
       values.push(id);
 
-      // Bangun query SQL
-      const q = `UPDATE tb_m_master_schedules
-                 SET ${updateFields.join(", ")}
-                 WHERE schedule_id = $${values.length}
-                 RETURNING *`;
+      // Bangun query SQL untuk mengupdate tb_m_master_schedules
+      const updateQuery = `UPDATE tb_m_master_schedules
+                           SET ${updateFields.join(", ")}
+                           WHERE schedule_id = $${values.length}
+                           RETURNING *`;
 
       // Lakukan koneksi dan eksekusi query
       const client = await database.connect();
-      const result = await client.query(q, values);
+      const updateResult = await client.query(updateQuery, values);
+
+      // Jika plan_dt di-update, ambil period_val dan period_nm dari tb_m_master_schedules
+      if (plan_dt) {
+        const periodQuery = `SELECT period_val, period_nm FROM tb_m_master_schedules WHERE schedule_id = $1`;
+        const periodResult = await client.query(periodQuery, [id]);
+
+        if (periodResult.rows.length > 0) {
+          const { period_val, period_nm } = periodResult.rows[0];
+
+          // Hitung last_krs berdasarkan period_val dan period_nm
+          let periodMultiplier;
+          switch (period_nm.toLowerCase()) {
+            case "day":
+            case "hari":
+              periodMultiplier = 1;
+              break;
+            case "week":
+            case "minggu":
+              periodMultiplier = 7;
+              break;
+            case "month":
+            case "bulan":
+              periodMultiplier = 30; // atau gunakan perhitungan dinamis untuk bulan
+              break;
+            case "year":
+            case "tahun":
+              periodMultiplier = 365;
+              break;
+            default:
+              periodMultiplier = 1; // fallback ke hari jika tidak dikenali
+          }
+
+          // Hitung last_krs (tanggal mundur dari plan_dt)
+          const planDate = new Date(plan_dt);
+          const lastKrsDate = new Date(planDate);
+          lastKrsDate.setDate(
+            planDate.getDate() - period_val * periodMultiplier
+          );
+
+          // Update last_krs di tb_m_master_schedules
+          const lastKrsQuery = `UPDATE tb_m_master_schedules
+                                SET last_krs = $1
+                                WHERE schedule_id = $2
+                                RETURNING *`;
+          const lastKrsResult = await client.query(lastKrsQuery, [
+            lastKrsDate,
+            id,
+          ]);
+
+          console.log("lastKrsResult.rows", lastKrsResult.rows);
+        }
+      }
+
       client.release();
-      console.log("result.rows", result.rows);
+
       // Kirim response berhasil
       res.status(200).json({
         message: "Success to Edit Schedule",
-        data: result.rows,
+        data: updateResult.rows,
       });
     } catch (error) {
       console.log(error);

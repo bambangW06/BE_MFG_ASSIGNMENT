@@ -4,8 +4,10 @@ var moment = require("moment-timezone");
 module.exports = {
   addReservasi: async (req, res) => {
     try {
-      const { drill, reamer, tap, insert, reservasiDate } = req.body;
-      console.log(drill, reamer, tap, insert, reservasiDate);
+      const { drill, reamer, tap, insert, reservasiDate, shift } = req.body;
+      console.log(req.body);
+
+      console.log(drill, reamer, tap, insert, reservasiDate, shift);
 
       // Object to hold field names and values
       const fields = {
@@ -14,6 +16,7 @@ module.exports = {
         tap: tap || null,
         insert: insert || null,
         reservasi_dt: reservasiDate,
+        shift: shift,
       };
 
       // Filter out null or empty string values
@@ -32,10 +35,10 @@ module.exports = {
 
       // Base query for INSERT
       let q = `
-        INSERT INTO tb_m_reservasi (${fieldNames.join(", ")})
-        VALUES (${valuePlaceholders})
-        ON CONFLICT (reservasi_dt) 
-        DO UPDATE SET `;
+              INSERT INTO tb_m_reservasi (${fieldNames.join(", ")})
+              VALUES (${valuePlaceholders})
+              ON CONFLICT (reservasi_dt, shift) 
+              DO UPDATE SET `;
 
       // Array to store the update clauses
       const updateClauses = fieldNames
@@ -65,11 +68,15 @@ module.exports = {
   },
   getReservasi: async (req, res) => {
     try {
+      const shift = req.query.shift;
+
+      // console.log(shift);
+
       const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
       console.log(today);
-      const q = `SELECT * FROM tb_m_reservasi WHERE reservasi_dt = $1;`;
+      const q = `SELECT * FROM tb_m_reservasi WHERE reservasi_dt = $1 AND shift = $2;`;
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [today]);
+      const userDataQuery = await client.query(q, [today, shift]);
       const userData = userDataQuery.rows;
       client.release();
       if (userData.length > 0) {
@@ -80,6 +87,8 @@ module.exports = {
             .format("YYYY-MM-DD");
         });
       }
+
+      // console.log("reservasi", userData);
       res.status(200).json({
         message: "Success to Get Reservasi",
         data: userData,

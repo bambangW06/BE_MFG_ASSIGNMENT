@@ -39,7 +39,7 @@ module.exports = {
       // Batch update untuk mengubah plan_dt di tb_m_master_schedules
       for (const { schedule_id, plan_dt } of updateData) {
         const updateQuery = `
-          UPDATE tb_m_master_schedules
+           UPDATE tb_m_master_schedules
           SET plan_dt = $1
           WHERE schedule_id = $2 AND plan_dt IS NULL
         `;

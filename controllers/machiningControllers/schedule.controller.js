@@ -1,4 +1,5 @@
 var database = require("../../config/storage");
+var moment = require("moment-timezone");
 
 module.exports = {
   addScheduleKuras: async (req, res) => {
@@ -101,7 +102,6 @@ module.exports = {
   editScheduleKuras: async (req, res) => {
     try {
       const id = req.params.id;
-      // console.log("idparam", id);
       const {
         line_id,
         line_nm,
@@ -112,17 +112,6 @@ module.exports = {
         periodVal,
         periodNm,
       } = req.body;
-      // console.log(
-      //   "edit",
-      //   line_id,
-      //   line_nm,
-      //   machine_id,
-      //   machines,
-      //   last_krs,
-      //   shift,
-      //   periodVal,
-      //   periodNm
-      // );
 
       if (
         !id ||
@@ -136,26 +125,94 @@ module.exports = {
       ) {
         return res.status(400).json({ message: "Bidang wajib tidak lengkap" });
       }
-      const q = `UPDATE tb_m_master_schedules
-                 SET line_id = $1, line_nm = $2, machine_id = $3, machine_nm = $4, last_krs = $5, shift = $6, period_val = $7, period_nm = $8
-                 WHERE schedule_id = $9
-                 RETURNING *`;
-      const values = [
+
+      // Konversi last_krs ke format YYYY-MM-DD
+      const formattedLastKrs = moment(last_krs, "DD-MM-YYYY").format(
+        "YYYY-MM-DD"
+      );
+
+      // Koneksi ke database
+      const client = await database.connect();
+
+      // Query untuk mendapatkan data yang ada sebelum diedit
+      const currentDataQuery = await client.query(
+        `SELECT last_krs, period_val, period_nm FROM tb_m_master_schedules WHERE schedule_id = $1`,
+        [id]
+      );
+      const currentData = currentDataQuery.rows[0];
+
+      // Inisialisasi kolom yang akan diupdate
+      let columnsToUpdate = [
+        "line_id = $1",
+        "line_nm = $2",
+        "machine_id = $3",
+        "machine_nm = $4",
+        "last_krs = $5",
+        "shift = $6",
+        "period_val = $7",
+        "period_nm = $8",
+      ];
+      let values = [
         line_id,
         line_nm,
         machine_id,
         machines,
-        last_krs,
+        formattedLastKrs, // gunakan last_krs yang sudah diformat
         shift,
         periodVal,
         periodNm,
         id,
       ];
-      const client = await database.connect();
+
+      // Periksa apakah last_krs, period_val, atau period_nm berubah
+      if (
+        currentData.last_krs !== formattedLastKrs ||
+        currentData.period_val !== periodVal ||
+        currentData.period_nm !== periodNm
+      ) {
+        // Hitung nilai plan_dt baru
+        let plan_dt;
+
+        // Parsing last_krs menjadi objek tanggal dengan moment
+        const lastKrsDate = moment(formattedLastKrs, "YYYY-MM-DD");
+
+        // Hitung plan_dt berdasarkan periodNm dan periodVal
+        switch (periodNm.toLowerCase()) {
+          case "day":
+          case "days":
+            plan_dt = lastKrsDate.add(periodVal, "days").format("YYYY-MM-DD");
+            break;
+          case "month":
+          case "months":
+            plan_dt = lastKrsDate.add(periodVal, "months").format("YYYY-MM-DD");
+            break;
+          case "year":
+          case "years":
+            plan_dt = lastKrsDate.add(periodVal, "years").format("YYYY-MM-DD");
+            break;
+          default:
+            // Jika periodNm tidak dikenal, kembalikan error
+            return res.status(400).json({ message: "PeriodNm tidak dikenal" });
+        }
+
+        // Tambahkan update plan_dt ke query
+        columnsToUpdate.push("plan_dt = $10");
+        values.push(plan_dt);
+      }
+
+      // Buat query dengan kolom yang akan diupdate
+      const q = `UPDATE tb_m_master_schedules
+                 SET ${columnsToUpdate.join(", ")}
+                 WHERE schedule_id = $9
+                 RETURNING *`;
+
+      // Menjalankan query update
       const userDataQuery = await client.query(q, values);
       const userData = userDataQuery.rows;
       client.release();
-      res.status(201).json({
+
+      // Mengirimkan respons ke frontend
+      res.status(200).json({
         message: "Success to Edit Data",
         data: userData,
       });

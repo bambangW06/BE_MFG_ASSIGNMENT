@@ -108,28 +108,42 @@ module.exports = {
   },
   getHistorySchedule: async (req, res) => {
     try {
-      const months = moment().format("YYYY-MM");
-      // console.log("Months:", months);
-      const q = `SELECT *
-                FROM tb_r_schedules
-                WHERE TO_CHAR(actual_dt, 'YYYY-MM') = $1
-                ORDER BY actual_dt DESC;`;
+      // SQL query untuk mengambil semua data dari tabel tb_r_schedules
+      const q = `SELECT 
+      r.*, 
+      m.period_val, 
+      m.period_nm
+    FROM 
+      tb_r_schedules r
+    LEFT JOIN 
+      tb_m_master_schedules m
+    ON 
+      r.schedule_id = m.schedule_id
+    ORDER BY 
+      r.actual_dt DESC;`;
+
+      // Koneksi ke database
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [months]);
+      // Menjalankan query tanpa filter waktu
+      const userDataQuery = await client.query(q);
       const userData = userDataQuery.rows;
+      // Melepaskan koneksi ke database
       client.release();
+
+      // Memformat tanggal jika data ditemukan
       if (userData.length > 0) {
         userData.forEach((row) => {
           row.actual_dt = moment(row.actual_dt).format("DD-MM-YYYY");
         });
       }
 
-      // console.log("data dikrim ke FE", userData);
-      res.status(201).json({
+      // Mengirimkan respons ke frontend dengan data yang diambil
+      res.status(200).json({
         message: "Success to Get History Schedule",
         data: userData,
       });
     } catch (error) {
+      // Menangani error dan mengirimkan respons kegagalan
       console.log(error);
       res.status(500).json({
         message: "Failed to Get History Schedule",
