@@ -4,10 +4,29 @@ var moment = require("moment-timezone");
 module.exports = {
   addReservasi: async (req, res) => {
     try {
-      const { drill, reamer, tap, insert, reservasiDate, shift } = req.body;
-      console.log(req.body);
+      const {
+        drill,
+        reamer,
+        tap,
+        insert,
+        endmill,
+        brush,
+        reservasiDate,
+        shift,
+      } = req.body;
 
-      console.log(drill, reamer, tap, insert, reservasiDate, shift);
+      // console.log(req.body);
+
+      // console.log(
+      //   drill,
+      //   reamer,
+      //   tap,
+      //   insert,
+      //   endmill,
+      //   brush,
+      //   reservasiDate,
+      //   shift
+      // );
 
       // Object to hold field names and values
       const fields = {
@@ -15,6 +34,8 @@ module.exports = {
         reamer: reamer || null,
         tap: tap || null,
         insert: insert || null,
+        endmill: endmill || null,
+        brush: brush || null,
         reservasi_dt: reservasiDate,
         shift: shift,
       };
@@ -42,7 +63,7 @@ module.exports = {
 
       // Array to store the update clauses
       const updateClauses = fieldNames
-        .filter((field) => field !== "reservasi_dt") // Exclude reservasi_dt from the update clauses
+        .filter((field) => field !== "reservasi_dt" && field !== "shift") // Exclude reservasi_dt and shift from the update clauses
         .map((field) => `${field} = EXCLUDED.${field}`);
 
       // Join update clauses with commas
@@ -66,14 +87,14 @@ module.exports = {
       });
     }
   },
+
   getReservasi: async (req, res) => {
     try {
-      const shift = req.query.shift;
-
-      // console.log(shift);
+      const shift = req.query.shift; // Ambil shift dari query parameter
+      // console.log("shift", shift);
 
       const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-      console.log(today);
+      // console.log("today", today);
       const q = `SELECT * FROM tb_m_reservasi WHERE reservasi_dt = $1 AND shift = $2;`;
       const client = await database.connect();
       const userDataQuery = await client.query(q, [today, shift]);

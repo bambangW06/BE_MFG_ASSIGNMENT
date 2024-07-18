@@ -113,6 +113,10 @@ module.exports = {
         periodNm,
       } = req.body;
 
+      // Logging untuk input dari frontend
+      console.log("Raw Last KRS from Frontend:", last_krs);
+
+      // Validasi input wajib
       if (
         !id ||
         !line_id ||
@@ -126,10 +130,13 @@ module.exports = {
         return res.status(400).json({ message: "Bidang wajib tidak lengkap" });
       }
 
-      // Konversi last_krs ke format YYYY-MM-DD
-      const formattedLastKrs = moment(last_krs, "DD-MM-YYYY").format(
-        "YYYY-MM-DD"
-      );
+      // Verifikasi apakah last_krs adalah tanggal yang valid dalam format YYYY-MM-DD
+      if (!moment(last_krs, "YYYY-MM-DD", true).isValid()) {
+        console.log("Invalid date format:", last_krs);
+        return res
+          .status(400)
+          .json({ message: "Format tanggal last_krs tidak valid" });
+      }
 
       // Koneksi ke database
       const client = await database.connect();
@@ -140,6 +147,9 @@ module.exports = {
         [id]
       );
       const currentData = currentDataQuery.rows[0];
+
+      // Debug log untuk data yang diambil dari database
+      console.log(`Current Data from DB:`, currentData);
 
       // Inisialisasi kolom yang akan diupdate
       let columnsToUpdate = [
@@ -157,43 +167,57 @@ module.exports = {
         line_nm,
         machine_id,
         machines,
-        formattedLastKrs, // gunakan last_krs yang sudah diformat
+        last_krs, // menggunakan last_krs langsung
         shift,
         periodVal,
         periodNm,
-        id,
+        id, // ID untuk klausa WHERE
       ];
 
       // Periksa apakah last_krs, period_val, atau period_nm berubah
       if (
-        currentData.last_krs !== formattedLastKrs ||
+        currentData.last_krs !== last_krs ||
         currentData.period_val !== periodVal ||
-        currentData.period_nm !== periodNm
+        currentData.period_nm.toLowerCase() !== periodNm.toLowerCase()
       ) {
         // Hitung nilai plan_dt baru
         let plan_dt;
 
         // Parsing last_krs menjadi objek tanggal dengan moment
-        const lastKrsDate = moment(formattedLastKrs, "YYYY-MM-DD");
+        const lastKrsDate = moment(last_krs, "YYYY-MM-DD");
+
+        // Debug log untuk tanggal last_krs setelah parsing
+        console.log(
+          `Parsed Last KRS Date: ${lastKrsDate.format("YYYY-MM-DD")}`
+        );
 
         // Hitung plan_dt berdasarkan periodNm dan periodVal
         switch (periodNm.toLowerCase()) {
           case "day":
           case "days":
-            plan_dt = lastKrsDate.add(periodVal, "days").format("YYYY-MM-DD");
+            plan_dt = lastKrsDate
+              .add(parseInt(periodVal, 10), "days")
+              .format("YYYY-MM-DD");
             break;
           case "month":
           case "months":
-            plan_dt = lastKrsDate.add(periodVal, "months").format("YYYY-MM-DD");
+            plan_dt = lastKrsDate
+              .add(parseInt(periodVal, 10), "months")
+              .format("YYYY-MM-DD");
             break;
           case "year":
           case "years":
-            plan_dt = lastKrsDate.add(periodVal, "years").format("YYYY-MM-DD");
+            plan_dt = lastKrsDate
+              .add(parseInt(periodVal, 10), "years")
+              .format("YYYY-MM-DD");
             break;
           default:
             // Jika periodNm tidak dikenal, kembalikan error
             return res.status(400).json({ message: "PeriodNm tidak dikenal" });
         }
+
+        // Debug log untuk nilai plan_dt yang dihitung
+        console.log(`Calculated Plan Date: ${plan_dt}`);
 
         // Tambahkan update plan_dt ke query
         columnsToUpdate.push("plan_dt = $10");
@@ -224,6 +248,7 @@ module.exports = {
       });
     }
   },
+
   deleteScheduleKuras: async (req, res) => {
     try {
       const id = req.params.id;

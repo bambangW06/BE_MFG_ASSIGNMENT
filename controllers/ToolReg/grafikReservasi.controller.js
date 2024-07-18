@@ -4,15 +4,15 @@ var moment = require("moment-timezone");
 module.exports = {
   getGrafikReservasi: async (req, res) => {
     try {
-      const currenMonth = moment().format("MM");
-      const currenYear = moment().format("YYYY");
+      const currenMonth = moment().format("YYYY-MM");
+      // console.log("currenMonth", currenMonth);
       const q = `
-                SELECT * FROM tb_m_reservasi 
-                WHERE EXTRACT(MONTH FROM reservasi_dt) = $1 
-                AND EXTRACT(YEAR FROM reservasi_dt) = $2;
+                  SELECT * FROM tb_m_reservasi 
+                  WHERE TO_CHAR(reservasi_dt, 'YYYY-MM') = '${currenMonth}';
                 `;
+
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [currenMonth, currenYear]);
+      const userDataQuery = await client.query(q);
       const userData = userDataQuery.rows;
       client.release();
       if (userData.length > 0) {
@@ -21,7 +21,7 @@ module.exports = {
         });
       }
 
-      console.log("reservasi", userData);
+      // console.log("reservasi", userData);
       res.status(200).json({
         message: "Success to Get Reservasi",
         data: userData,

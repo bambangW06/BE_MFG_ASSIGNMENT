@@ -19,6 +19,8 @@ var grafikRegrinding = require("./Tool/grafikReg");
 var planMonth = require("./cms/planMotnh");
 var historySchedule = require("./cms/history");
 var historyKuras = require("./cms/historyKuras");
+var delivery = require("./Delivery/masterLine");
+var masterTools = require("./Delivery/masterTool");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -39,4 +41,6 @@ router.use("/grafikRegrinding", grafikRegrinding);
 router.use("/planMonth", planMonth);
 router.use("/historySchedule", historySchedule);
 router.use("/historyKuras", historyKuras);
+router.use("/delivery", delivery);
+router.use("/masterTools", masterTools);
 module.exports = router;

@@ -21,31 +21,30 @@ const limiter = rateLimit({
 });
 
 // Deklarasi path untuk penyimpanan file
-const uploadPath = path.join(__dirname, 'uploads');
+const uploadPath = path.join(__dirname, "uploads");
 
 // Konfigurasi multer untuk menangani unggahan file
 const storage = multer.diskStorage({
   destination: uploadPath,
-  filename: function(req, file, cb) {
-    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-  }
+  filename: function (req, file, cb) {
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
+  },
 });
 
 const upload = multer({ storage: storage });
 
-
-
-
-
 app.use(cors());
-app.use(upload.single('foto')); // 'foto sesuai dengan nama field pada form
+app.use(upload.single("foto")); // 'foto sesuai dengan nama field pada form
 app.use(limiter);
 app.use(logger("dev"));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 // Mengatur akses statis ke folder 'uploads'
-app.use('/uploads', express.static(uploadPath));
+app.use("/uploads", express.static(uploadPath));
 
 app.use(express.static(path.join(__dirname, "public")));
 // app.use(sqlinjection);
@@ -53,4 +52,3 @@ app.use("/", require("./routes"));
 app.use("/", indexRouter);
 
 module.exports = app;
-

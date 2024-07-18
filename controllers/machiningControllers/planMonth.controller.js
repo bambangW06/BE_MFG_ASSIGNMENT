@@ -201,7 +201,7 @@ module.exports = {
             id,
           ]);
 
-          console.log("lastKrsResult.rows", lastKrsResult.rows);
+          // console.log("lastKrsResult.rows", lastKrsResult.rows);
         }
       }
 

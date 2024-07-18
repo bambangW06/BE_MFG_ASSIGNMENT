@@ -93,7 +93,7 @@ module.exports = {
         : profile;
       // console.log(finalProfileUrl);
 
-      // console.log("Data yang diterima dari req.body:", req.body); // Log data yang diterima dari body
+      console.log("Data yang diterima dari req.body:", req.body);
 
       // Buat kueri update dengan menggunakan sintaks yang benar untuk Postgres
       const updateQuery = `
@@ -130,19 +130,34 @@ module.exports = {
   deleteKaryawan: async (req, res) => {
     try {
       const id = req.params.id;
-      const q = `DELETE FROM tb_m_employees WHERE employee_id = $1`;
+
+      // Mulai transaksi
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [id]);
-      const userData = userDataQuery.rows;
+      await client.query("BEGIN");
+
+      // Hapus dulu data absensi yang terkait dengan karyawan
+      const deleteAbsencesQuery = `DELETE FROM tb_m_absences WHERE employee_id = $1`;
+      await client.query(deleteAbsencesQuery, [id]);
+
+      // Hapus data karyawan
+      const deleteEmployeeQuery = `DELETE FROM tb_m_employees WHERE employee_id = $1`;
+      await client.query(deleteEmployeeQuery, [id]);
+
+      // Commit transaksi
+      await client.query("COMMIT");
       client.release();
-      res.status(201).json({
-        message: "Success to Delete Data",
-        data: userData,
+
+      res.status(200).json({
+        message: "Berhasil menghapus data karyawan",
       });
     } catch (error) {
-      console.log(error);
+      // Rollback transaksi jika terjadi kesalahan
+      await client.query("ROLLBACK");
+      client.release();
+
+      console.error("Gagal menghapus karyawan:", error);
       res.status(500).json({
-        message: "Failed to Delete Data",
+        message: "Gagal menghapus data karyawan",
       });
     }
   },

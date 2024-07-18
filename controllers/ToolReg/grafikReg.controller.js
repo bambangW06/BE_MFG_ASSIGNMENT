@@ -4,13 +4,11 @@ var moment = require("moment-timezone");
 module.exports = {
   getGrafikRegrinding: async (req, res) => {
     try {
-      const currenMonth = moment().format("MM");
-      const currenYear = moment().format("YYYY");
+      const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
       const q = `SELECT * FROM tb_m_regrinding 
-                WHERE EXTRACT(MONTH FROM reg_dt) = $1 
-                AND EXTRACT(YEAR FROM reg_dt) = $2;;`;
+                WHERE reg_dt = $1`;
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [currenMonth, currenYear]);
+      const userDataQuery = await client.query(q, [today]);
       const userData = userDataQuery.rows;
       client.release();
       if (userData.length > 0) {
