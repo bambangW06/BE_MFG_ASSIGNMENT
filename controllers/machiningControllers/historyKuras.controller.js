@@ -10,20 +10,23 @@ module.exports = {
       console.log("machineNm", machineNm);
       const q = `
                 SELECT 
-                    m.line_nm,
-                    m.machine_nm,
-                    m.last_krs, 
-                    m.reason,
-                    r.reason_plan
+                  m.line_nm,
+                  m.machine_nm,
+                  m.last_krs, 
+                  m.reason,
+                  r.reason_plan
                 FROM 
-                    tb_m_master_schedules m
+                  tb_m_master_schedules m
                 LEFT JOIN 
-                    tb_r_schedules r
+                  tb_r_schedules r
                 ON 
-                    m.machine_nm = r.machine_nm
+                  m.machine_nm = r.machine_nm
                 WHERE 
-                    m.machine_nm = $1;
-            `;
+                  m.machine_nm = $1
+                ORDER BY 
+                  m.last_krs DESC
+                LIMIT 1;
+              `;
       const client = await database.connect();
       const userDataQuery = await client.query(q, [machineNm]);
       const userData = userDataQuery.rows;

@@ -65,17 +65,38 @@ module.exports = {
     try {
       let whereCond = ``;
       const machine_nm = req.query.machine_nm;
-      // console.log("machine_nm", machine_nm);
       const moment = require("moment-timezone");
+
       if (machine_nm) {
         // Menggunakan LIKE untuk mencocokkan sebagian dari nilai pada beberapa kolom
-        whereCond = `WHERE tb_m_master_schedules.machine_nm LIKE '%${machine_nm}%'`;
+        whereCond = `AND t1.machine_nm LIKE '%${machine_nm}%'`;
       }
-      const q = `SELECT * FROM tb_m_master_schedules ${whereCond}`;
+
+      // Query untuk mendapatkan data dengan last_krs terbaru untuk setiap machine_nm
+      const q = `
+        SELECT t1.*
+        FROM
+          tb_m_master_schedules t1
+        INNER JOIN (
+          SELECT
+            machine_nm,
+            MAX(last_krs) AS max_krs
+          FROM
+            tb_m_master_schedules
+          GROUP BY
+            machine_nm
+        ) t2
+        ON
+          t1.machine_nm = t2.machine_nm AND
+          t1.last_krs = t2.max_krs
+        ${whereCond}
+      `;
+
       const client = await database.connect();
       const scheduleDataQuery = await client.query(q);
       const scheduleData = scheduleDataQuery.rows;
       client.release();
+
       // Memastikan data tanggal ditangani dengan benar
       if (scheduleData.length > 0) {
         // Konversi tanggal ke zona waktu 'Asia/Jakarta' menggunakan moment-timezone
@@ -86,7 +107,6 @@ module.exports = {
         });
       }
 
-      // console.log("data dikrim ke FE", scheduleData);
       res.status(200).json({
         message: "Success to Get Schedule",
         data: scheduleData,
