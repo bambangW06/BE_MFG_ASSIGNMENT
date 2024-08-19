@@ -33,24 +33,28 @@ module.exports = {
   getShift: async (req, res) => {
     try {
       const moment = require("moment-timezone");
-      // Query untuk mendapatkan tanggal hari ini dalam zona waktu 'Asia/Jakarta'
-      const q = `SELECT today, current_shift FROM tb_m_current_shift WHERE today = date(timezone('Asia/Jakarta', CURRENT_TIMESTAMP));`;
-      // console.log("Query yang dijalankan:", q);
+      const currentTime = moment().tz("Asia/Jakarta");
+      const hour = currentTime.hour(); // Mendapatkan jam saat ini
+
+      // Tentukan apakah kita masih dalam shift malam hari ini atau sudah berganti hari
+      let effectiveDate;
+      if (hour >= 0 && hour < 7) {
+        // Jika jam antara 00:00 sampai sebelum 07:00, gunakan tanggal kemarin
+        effectiveDate = moment(currentTime)
+          .subtract(1, "day")
+          .format("YYYY-MM-DD");
+      } else {
+        // Jika jam setelah 07:00, gunakan tanggal hari ini
+        effectiveDate = moment(currentTime).format("YYYY-MM-DD");
+      }
+
+      // Query untuk mendapatkan shift berdasarkan tanggal yang efektif
+      const q = `SELECT today, current_shift FROM tb_m_current_shift WHERE today = '${effectiveDate}';`;
 
       const client = await database.connect();
       const userDataQuery = await client.query(q);
       const userData = userDataQuery.rows;
       client.release();
-
-      // Memastikan data tanggal ditangani dengan benar
-      if (userData.length > 0) {
-        // Konversi tanggal ke zona waktu 'Asia/Jakarta' menggunakan moment-timezone
-        userData.forEach((row) => {
-          row.today = moment(row.today).tz("Asia/Jakarta").format("YYYY-MM-DD");
-        });
-      }
-
-      // console.log("Data karyawan yang dikirim ke frontend getShift:", userData);
 
       res.status(200).json({
         message: "Success to Get Shift",
