@@ -46,6 +46,22 @@ module.exports = {
   },
   getAbsen: async (req, res) => {
     try {
+      const moment = require("moment-timezone");
+      const currentTime = moment().tz("Asia/Jakarta");
+      const hour = currentTime.hour(); // Mendapatkan jam saat ini
+
+      // Tentukan apakah kita masih dalam shift malam hari ini atau sudah berganti hari
+      let effectiveDate;
+      if (hour >= 0 && hour < 7) {
+        // Jika jam antara 00:00 sampai sebelum 07:00, gunakan tanggal kemarin
+        effectiveDate = moment(currentTime)
+          .subtract(1, "day")
+          .format("YYYY-MM-DD");
+      } else {
+        // Jika jam setelah 07:00, gunakan tanggal hari ini
+        effectiveDate = moment(currentTime).format("YYYY-MM-DD");
+      }
+
       let q = `SELECT 
                   abs.*,
                   emp.jabatan,
@@ -55,15 +71,13 @@ module.exports = {
               JOIN 
                   tb_m_employees emp ON abs.noreg = emp.noreg
               WHERE 
-                  abs.date_absence = timezone('Asia/Jakarta', CURRENT_DATE);
-              `;
+                  abs.date_absence = $1;`; // Menggunakan parameterized query dengan $1
 
       const client = await database.connect();
-      const userDataQuery = await client.query(q);
-      // console.log("userDataQuery:", userDataQuery);
+      const userDataQuery = await client.query(q, [effectiveDate]); // Memasukkan effectiveDate sebagai parameter
       const userData = userDataQuery.rows;
       client.release();
-      // console.log("Absen yang dikirim ke frontend:", userData);
+
       res.status(200).json({
         message: "Success to Get Absence",
         data: userData,
