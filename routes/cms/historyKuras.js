@@ -4,6 +4,6 @@ const {
 
 var router = require("express").Router();
 
-router.get("/get", getHistoryKuras);
+router.get("/get/:id", getHistoryKuras);
 
 module.exports = router;
