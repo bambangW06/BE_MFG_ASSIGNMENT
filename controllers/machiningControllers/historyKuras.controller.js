@@ -8,23 +8,24 @@ module.exports = {
       console.log("id", id);
 
       const q = `
-        SELECT 
-          m.line_nm,
-          m.machine_nm,
-          m.last_krs, 
-          m.reason,
-          r.reason_plan
-        FROM 
-          tb_m_master_schedules m
-        LEFT JOIN 
-          tb_r_schedules r
-        ON 
-          m.machine_nm = r.machine_nm
-        WHERE 
-          m.machine_id = $1  -- Menggunakan id sebagai filter pencarian
-        ORDER BY 
-          m.last_krs DESC
-        LIMIT 1;
+       SELECT 
+        m.line_nm,
+        m.machine_nm,
+        m.last_krs, 
+        m.reason,
+        r.reason_plan
+      FROM 
+        tb_m_master_schedules m
+      LEFT JOIN 
+        tb_r_schedules r
+      ON 
+        m.machine_nm = r.machine_nm AND m.last_krs = r.actual_dt
+      WHERE 
+        m.machine_id = $1
+      ORDER BY 
+        m.last_krs DESC
+      LIMIT 1;
+
       `;
 
       const client = await database.connect();
