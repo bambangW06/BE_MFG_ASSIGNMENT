@@ -18,10 +18,10 @@ module.exports = {
       const path = url.pathname;
 
       // Query untuk menyimpan data ke database
-      const q = `INSERT INTO tb_m_position (employee_id, nama, noreg, default_position, date_assign, photo, jabatan)
+      const q = `INSERT INTO tb_r_position (employee_id, nama, noreg, actual_position, date_assign, photo, jabatan)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (employee_id, date_assign) DO UPDATE 
-      SET default_position = EXCLUDED.default_position
+      SET actual_position = EXCLUDED.actual_position
       RETURNING *`;
       const values = [
         employee_id,
@@ -96,7 +96,7 @@ module.exports = {
       const moment = require("moment-timezone");
 
       const q = `
-        SELECT * FROM tb_m_position
+        SELECT * FROM tb_r_position
         WHERE date_assign = date(timezone('Asia/Jakarta', CURRENT_TIMESTAMP));
       `;
 
