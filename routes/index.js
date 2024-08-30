@@ -22,6 +22,7 @@ var historyKuras = require("./cms/historyKuras");
 var delivery = require("./Delivery/masterLine");
 var masterTools = require("./Delivery/masterTool");
 var kanban = require("./Delivery/kanban");
+var fromGel = require("./Delivery/fromGel");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -45,4 +46,5 @@ router.use("/historyKuras", historyKuras);
 router.use("/delivery", delivery);
 router.use("/masterTools", masterTools);
 router.use("/kanban", kanban);
+router.use("/kanbanFromGel", fromGel);
 module.exports = router;
