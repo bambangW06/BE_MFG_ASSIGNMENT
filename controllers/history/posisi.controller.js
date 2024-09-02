@@ -55,17 +55,31 @@ module.exports = {
   getStatusPos: async (req, res) => {
     try {
       const moment = require("moment-timezone");
+      const currentTime = moment().tz("Asia/Jakarta");
+      const hour = currentTime.hour(); // Mendapatkan jam saat ini
+
+      // Tentukan apakah kita masih dalam shift malam hari ini atau sudah berganti hari
+      let effectiveDate;
+      if (hour >= 0 && hour < 7) {
+        // Jika jam antara 00:00 sampai sebelum 07:00, gunakan tanggal kemarin
+        effectiveDate = moment(currentTime)
+          .subtract(1, "day")
+          .format("YYYY-MM-DD");
+      } else {
+        // Jika jam setelah 07:00, gunakan tanggal hari ini
+        effectiveDate = moment(currentTime).format("YYYY-MM-DD");
+      }
       const q = `
             SELECT tb_m_employees.*, absences.status, absences.date_absence
             FROM tb_m_employees
             LEFT JOIN (
                 SELECT employee_id, status, date_absence
                 FROM tb_m_absences
-                WHERE date_absence = date(timezone('Asia/Jakarta', CURRENT_TIMESTAMP))
+                WHERE date_absence = $1
             ) AS absences ON tb_m_employees.employee_id = absences.employee_id;
         `;
       const client = await database.connect();
-      const userDataQuery = await client.query(q);
+      const userDataQuery = await client.query(q, [effectiveDate]);
       const userData = userDataQuery.rows;
       client.release();
       // Memastikan data tanggal ditangani dengan benar
@@ -92,12 +106,25 @@ module.exports = {
 
   getPosition: async (req, res) => {
     try {
-      // Pastikan timezone yang digunakan benar
       const moment = require("moment-timezone");
+      const currentTime = moment().tz("Asia/Jakarta");
+      const hour = currentTime.hour(); // Mendapatkan jam saat ini
+
+      // Tentukan apakah kita masih dalam shift malam hari ini atau sudah berganti hari
+      let effectiveDate;
+      if (hour >= 0 && hour < 7) {
+        // Jika jam antara 00:00 sampai sebelum 07:00, gunakan tanggal kemarin
+        effectiveDate = moment(currentTime)
+          .subtract(1, "day")
+          .format("YYYY-MM-DD");
+      } else {
+        // Jika jam setelah 07:00, gunakan tanggal hari ini
+        effectiveDate = moment(currentTime).format("YYYY-MM-DD");
+      }
 
       const q = `
         SELECT * FROM tb_r_position
-        WHERE date_assign = date(timezone('Asia/Jakarta', CURRENT_TIMESTAMP));
+        WHERE date_assign = '${effectiveDate}';
       `;
 
       const client = await database.connect();
