@@ -3,18 +3,25 @@ module.exports = {
   addKaryawan: async (req, res) => {
     try {
       // Ambil data dari body permintaan
-      const { nama, noreg, shift, jabatan } = req.body;
+      const { nama, noreg, shift, jabatan, default_position } = req.body;
       const profileFilename = req.file.filename; // Ambil nama file foto dari req.file
       // Buat URL lengkap untuk foto berdasarkan base URL
       const profileUrl = `/uploads/${profileFilename}`;
 
       // Buat query untuk menyimpan data ke dalam database
-      let q = `INSERT INTO tb_m_employees (nama, noreg, profile, shift, jabatan)
-                    VALUES ($1, $2, $3, $4, $5) 
+      let q = `INSERT INTO tb_m_employees (nama, noreg, profile, shift, jabatan, default_position)
+                    VALUES ($1, $2, $3, $4, $5, $6) 
                     RETURNING *`;
 
       // Atur nilai-nilai untuk parameter query
-      const values = [nama, noreg, profileUrl, shift, jabatan];
+      const values = [
+        nama,
+        noreg,
+        profileUrl,
+        shift,
+        jabatan,
+        default_position,
+      ];
 
       // Koneksi ke database
       const client = await database.connect();
@@ -69,7 +76,8 @@ module.exports = {
         "SELECT * FROM tb_m_employees WHERE employee_id = $1",
         [id]
       );
-      const { nama, noreg, shift, jabatan, profile } = employee.rows[0];
+      const { nama, noreg, shift, jabatan, profile, default_position } =
+        employee.rows[0];
 
       // Tentukan nilai akhir untuk setiap input
       const finalNama =
@@ -91,15 +99,19 @@ module.exports = {
       const finalProfileUrl = req.file
         ? `/uploads/${req.file.filename}`
         : profile;
-      // console.log(finalProfileUrl);
+      const finalDefaultPosition =
+        req.body.default_position !== undefined &&
+        req.body.default_position.trim() !== ""
+          ? req.body.default_position
+          : default_position;
 
       console.log("Data yang diterima dari req.body:", req.body);
 
       // Buat kueri update dengan menggunakan sintaks yang benar untuk Postgres
       const updateQuery = `
                 UPDATE tb_m_employees
-                SET nama = $1, noreg = $2, profile = $3, shift = $4, jabatan = $5
-                WHERE employee_id = $6
+                SET nama = $1, noreg = $2, profile = $3, shift = $4, jabatan = $5, default_position = $6
+                WHERE employee_id = $7
             `;
 
       // Gunakan ID dari parameter untuk mengidentifikasi karyawan yang akan diperbarui
@@ -109,6 +121,7 @@ module.exports = {
         finalProfileUrl,
         finalShift,
         finalJabatan,
+        finalDefaultPosition,
         id,
       ];
 
