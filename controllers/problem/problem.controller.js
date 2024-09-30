@@ -58,26 +58,44 @@ module.exports = {
   getProblem: async (req, res) => {
     try {
       const modalType = req.query.modalType;
-      console.log("modalType", modalType);
+      // console.log("modalType", modalType);
 
       const time_range = req.query.time_range;
+      // console.log("time_range", time_range);
 
-      console.log("time_range", time_range);
+      const selectedDate = req.query.selectedDate;
+      // console.log("selectedDate", selectedDate);
 
-      // Tanggal hari ini pukul 07:00
-      const start_date = moment()
-        .startOf("day")
-        .add(7, "hours")
-        .format("YYYY-MM-DD HH:mm:ss");
+      let start_date, end_date;
 
-      // Tanggal besok pukul 07:00
-      const end_date = moment()
-        .add(1, "day")
-        .startOf("day")
-        .add(7, "hours")
-        .format("YYYY-MM-DD HH:mm:ss");
+      // Jika selectedDate ada, gunakan itu, jika tidak, gunakan tanggal hari ini
+      if (selectedDate) {
+        start_date = moment(selectedDate)
+          .startOf("day")
+          .add(7, "hours")
+          .format("YYYY-MM-DD HH:mm:ss");
 
-      if (modalType == "category") {
+        end_date = moment(selectedDate)
+          .add(1, "day")
+          .startOf("day")
+          .add(7, "hours")
+          .format("YYYY-MM-DD HH:mm:ss");
+      } else {
+        // Tanggal hari ini pukul 07:00
+        start_date = moment()
+          .startOf("day")
+          .add(7, "hours")
+          .format("YYYY-MM-DD HH:mm:ss");
+
+        // Tanggal besok pukul 07:00
+        end_date = moment()
+          .add(1, "day")
+          .startOf("day")
+          .add(7, "hours")
+          .format("YYYY-MM-DD HH:mm:ss");
+      }
+
+      if (modalType === "category") {
         const q = `
               SELECT 
                 r_in_process.*, 
@@ -102,35 +120,35 @@ module.exports = {
         const userData = userDataQuery.rows;
         client.release();
         res.status(200).json({
-          message: "Success to Add Data",
+          message: "Success to Get Data",
           data: userData,
         });
-      } else if (modalType == "next proses") {
+      } else if (modalType === "next proses") {
         const q = `
           SELECT 
-          r_next_process.*,
-          m_line.line_nm,
-          m_machine.machine_nm,
-          m_tool.tool_nm,
-          m_tool.std_counter
+            r_next_process.*,
+            m_line.line_nm,
+            m_machine.machine_nm,
+            m_tool.tool_nm,
+            m_tool.std_counter
           FROM 
-          tb_r_next_process r_next_process
+            tb_r_next_process r_next_process
           INNER JOIN 
-          tb_m_lines m_line 
+            tb_m_lines m_line 
           ON 
-          r_next_process.line_id = m_line.line_id
+            r_next_process.line_id = m_line.line_id
           INNER JOIN 
-          tb_m_machines m_machine 
+            tb_m_machines m_machine 
           ON 
-          r_next_process.machine_id = m_machine.machine_id
+            r_next_process.machine_id = m_machine.machine_id
           INNER JOIN 
-          tb_m_master_tools m_tool 
+            tb_m_master_tools m_tool 
           ON 
-          r_next_process.tool_id = m_tool.tool_id
+            r_next_process.tool_id = m_tool.tool_id
           WHERE 
-          r_next_process.time_range = $1
-          AND 
-          r_next_process.created_dt BETWEEN $2 AND $3
+            r_next_process.time_range = $1
+            AND 
+            r_next_process.created_dt BETWEEN $2 AND $3
         `;
 
         const values = [time_range, start_date, end_date];
@@ -141,13 +159,173 @@ module.exports = {
         const userData = userDataQuery.rows;
         client.release();
         res.status(200).json({
-          message: "Success to Add Data",
+          message: "Success to Get Data",
           data: userData,
         });
       }
     } catch (error) {
+      console.error("Error fetching data:", error);
       res.status(500).json({
-        message: "Failed to Add Data",
+        message: "Failed to Get Data",
+        error: error.message,
+      });
+    }
+  },
+
+  deleteProblem: async (req, res) => {
+    try {
+      const modalType = req.query.modalType;
+      const problem_id = req.query.problem_id;
+      console.log("modalType", modalType);
+      console.log("problem_id", problem_id);
+      if (modalType === "category") {
+        const q = `DELETE FROM tb_r_in_process WHERE problem_id = $1`;
+
+        const values = [problem_id];
+        const client = await database.connect();
+        const userDataQuery = await client.query(q, values);
+        const userData = userDataQuery.rows;
+        client.release();
+        res.status(200).json({
+          message: "Success to Delete Data",
+          data: userData,
+        });
+      } else if (modalType === "next proses") {
+        const q = `DELETE FROM tb_r_next_process WHERE problem_id = $1`;
+
+        const values = [problem_id];
+        const client = await database.connect();
+        const userDataQuery = await client.query(q, values);
+        const userData = userDataQuery.rows;
+        client.release();
+        res.status(200).json({
+          message: "Success to Delete Data",
+          data: userData,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      res.status(500).json({
+        message: "Failed to Get Data",
+        error: error.message,
+      });
+    }
+  },
+  problemTable: async (req, res) => {
+    try {
+      const selectedDate = req.query.selectedDate;
+      console.log("selectedDate", selectedDate);
+
+      // Jika selectedDate tidak ada atau kosong, gunakan tanggal hari ini (today)
+      let start_date, end_date;
+
+      // Jika selectedDate ada, gunakan itu, jika tidak, gunakan tanggal hari ini
+      if (selectedDate) {
+        start_date = moment(selectedDate)
+          .startOf("day")
+          .add(7, "hours")
+          .format("YYYY-MM-DD HH:mm:ss");
+
+        end_date = moment(selectedDate)
+          .add(1, "day")
+          .startOf("day")
+          .add(7, "hours")
+          .format("YYYY-MM-DD HH:mm:ss");
+      } else {
+        // Tanggal hari ini pukul 07:00
+        start_date = moment()
+          .startOf("day")
+          .add(7, "hours")
+          .format("YYYY-MM-DD HH:mm:ss");
+
+        // Tanggal besok pukul 07:00
+        end_date = moment()
+          .add(1, "day")
+          .startOf("day")
+          .add(7, "hours")
+          .format("YYYY-MM-DD HH:mm:ss");
+      }
+
+      // Query untuk tb_r_in_process
+      const queryInProcess = `SELECT 
+                r_in_process.*, 
+                m_category.category_nm
+              FROM 
+                tb_r_in_process r_in_process
+              INNER JOIN 
+                tb_m_category m_category 
+              ON 
+                r_in_process.category_id = m_category.category_id
+              WHERE 
+                r_in_process.created_dt BETWEEN $1 AND $2`;
+
+      // Query untuk tb_r_next_proses
+      const queryNextProses = `SELECT 
+            r_next_process.*,
+            m_line.line_nm,
+            m_machine.machine_nm,
+            m_tool.tool_nm,
+            m_tool.std_counter
+          FROM 
+            tb_r_next_process r_next_process
+          INNER JOIN 
+            tb_m_lines m_line 
+          ON 
+            r_next_process.line_id = m_line.line_id
+          INNER JOIN 
+            tb_m_machines m_machine 
+          ON 
+            r_next_process.machine_id = m_machine.machine_id
+          INNER JOIN 
+            tb_m_master_tools m_tool 
+          ON 
+            r_next_process.tool_id = m_tool.tool_id
+          WHERE 
+            r_next_process.created_dt BETWEEN $1 AND $2`;
+
+      const values = [start_date, end_date];
+
+      const client = await database.connect();
+
+      // Jalankan kedua query secara paralel
+      const [inProcessDataQuery, nextProsesDataQuery] = await Promise.all([
+        client.query(queryInProcess, values),
+        client.query(queryNextProses, values),
+      ]);
+
+      let inProcessData = inProcessDataQuery.rows;
+      let nextProsesData = nextProsesDataQuery.rows;
+
+      // Format created_dt menjadi "YYYY-MM-DD"
+      inProcessData = inProcessData.map((item) => {
+        return {
+          ...item,
+          created_dt: moment(item.created_dt).format("YYYY-MM-DD"),
+        };
+      });
+
+      nextProsesData = nextProsesData.map((item) => {
+        return {
+          ...item,
+          created_dt: moment(item.created_dt).format("YYYY-MM-DD"),
+        };
+      });
+
+      client.release();
+
+      // Kirimkan data dari kedua tabel secara terpisah
+      res.status(200).json({
+        message: "Success to Get Data",
+        data: {
+          inProcess: inProcessData,
+          nextProcess: nextProsesData,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      res.status(500).json({
+        message: "Failed to Get Data",
+        error: error.message,
       });
     }
   },

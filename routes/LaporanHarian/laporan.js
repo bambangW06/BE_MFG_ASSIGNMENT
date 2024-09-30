@@ -8,6 +8,6 @@ var router = require("express").Router();
 
 router.get("/get/:line_nm", getTools);
 router.post("/add", addReportReg);
-router.get("/get/:selectedDate?", getReportReg);
+router.get("/get", getReportReg);
 
 module.exports = router;

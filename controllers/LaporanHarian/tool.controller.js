@@ -37,24 +37,36 @@ module.exports = {
 
       const created_dt = new Date(); // Current timestamp
 
-      // Query untuk upsert: insert jika tidak ada, update jika ada konflik pada kombinasi DATE(created_dt) + time_range
+      // Fungsi untuk mendapatkan ID terakhir dan menambah 1
+      const getNextId = async (client) => {
+        const query = `SELECT MAX(report_id) AS maxId FROM tb_r_regrind_reports`;
+        const result = await client.query(query);
+        const maxId = result.rows[0].maxid || 0; // Jika tabel kosong, mulai dari 0
+        return maxId + 1; // Tambah 1 untuk ID berikutnya
+      };
+
+      const client = await database.connect();
+
+      // Mendapatkan ID berikutnya untuk report_id
+      const nextReportId = await getNextId(client);
+
+      // Query untuk upsert berdasarkan kombinasi time_range dan tanggal
       const q = `
-        INSERT INTO tb_r_regrind_reports (created_dt, time_range, from_gel, penambahan, reg_set, tool_delay, time_delay)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        ON CONFLICT (time_range)
-        DO UPDATE SET
+        INSERT INTO tb_r_regrind_reports (report_id, created_dt, time_range, from_gel, penambahan, reg_set, tool_delay, time_delay)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (time_range, DATE(created_dt)) DO UPDATE
+        SET
           from_gel = EXCLUDED.from_gel,
           penambahan = EXCLUDED.penambahan,
           reg_set = EXCLUDED.reg_set,
           tool_delay = EXCLUDED.tool_delay,
-          time_delay = EXCLUDED.time_delay,
-          created_dt = EXCLUDED.created_dt -- Update timestamp if needed
-        WHERE DATE(tb_r_regrind_reports.created_dt) = DATE(EXCLUDED.created_dt)
+          time_delay = EXCLUDED.time_delay
         RETURNING *;
       `;
 
       const values = [
-        created_dt, // Current timestamp
+        nextReportId, // ID yang baru di-generate
+        created_dt,
         time_range,
         from_gel,
         penambahan,
@@ -63,7 +75,6 @@ module.exports = {
         time_delay,
       ];
 
-      const client = await database.connect();
       const userDataQuery = await client.query(q, values);
       const userData = userDataQuery.rows;
       client.release();
@@ -73,6 +84,7 @@ module.exports = {
         data: userData,
       });
     } catch (error) {
+      console.error("Error in addReportReg:", error); // Log error for debugging
       res.status(500).json({
         message: "Failed to Add or Update Data",
         error: error,
@@ -82,12 +94,12 @@ module.exports = {
 
   getReportReg: async (req, res) => {
     try {
-      const selectedDate = req.params.selectedDate;
+      const selectedDate = req.query.selectedDate;
       console.log("tanggalDariFrontEnd", selectedDate);
 
       // Gunakan tanggal dari front-end jika ada, jika tidak, gunakan hari ini
       const hariIni = selectedDate
-        ? moment(selectedDate).tz("Asia/Jakarta").startOf("day").add(7, "hours")
+        ? moment(selectedDate).startOf("day").add(7, "hours")
         : moment().tz("Asia/Jakarta").startOf("day").add(7, "hours");
 
       // Rentang waktu
