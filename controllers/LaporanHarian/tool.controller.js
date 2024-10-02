@@ -99,26 +99,27 @@ module.exports = {
 
       // Gunakan tanggal dari front-end jika ada, jika tidak, gunakan hari ini
       const hariIni = selectedDate
-        ? moment(selectedDate).startOf("day").add(7, "hours")
+        ? moment(selectedDate).tz("Asia/Jakarta").startOf("day").add(7, "hours")
         : moment().tz("Asia/Jakarta").startOf("day").add(7, "hours");
 
-      // Rentang waktu
-      const mulai = hariIni; // hari ini jam 07:00
-      const selesai = hariIni.clone().add(1, "day"); // besok jam 07:00
+      // Rentang waktu tanpa konversi ke UTC, tetap di timezone Asia/Jakarta
+      const mulai = hariIni; // tetap dalam Asia/Jakarta
+      const selesai = hariIni.clone().add(1, "day");
 
       console.log(
-        "Rentang waktu:",
+        "Rentang waktu (Asia/Jakarta):",
         mulai.format("YYYY-MM-DD HH:mm:ss"),
         "sampai",
         selesai.format("YYYY-MM-DD HH:mm:ss")
       );
 
       const q =
-        "SELECT * FROM tb_r_regrind_reports WHERE created_dt BETWEEN $1 AND $2";
+        "SELECT * FROM tb_r_regrind_reports WHERE created_dt AT TIME ZONE 'Asia/Jakarta' >= $1 AND created_dt AT TIME ZONE 'Asia/Jakarta' < $2";
       const client = await database.connect();
       const userDataQuery = await client.query(q, [mulai, selesai]);
       const userData = userDataQuery.rows;
       client.release();
+      console.log(userData);
 
       res.status(200).json({
         message: "Success to Get Data",

@@ -109,7 +109,7 @@ module.exports = {
               WHERE 
                 r_in_process.time_range = $1
               AND 
-                r_in_process.created_dt BETWEEN $2 AND $3
+                 r_in_process.created_dt AT TIME ZONE 'Asia/Jakarta' >= $2 AND r_in_process.created_dt AT TIME ZONE 'Asia/Jakarta' < $3
             `;
 
         const values = [time_range, start_date, end_date];
@@ -148,7 +148,7 @@ module.exports = {
           WHERE 
             r_next_process.time_range = $1
             AND 
-            r_next_process.created_dt BETWEEN $2 AND $3
+            r_next_process.created_dt AT TIME ZONE 'Asia/Jakarta' >= $2 AND r_next_process.created_dt AT TIME ZONE 'Asia/Jakarta' < $3
         `;
 
         const values = [time_range, start_date, end_date];
