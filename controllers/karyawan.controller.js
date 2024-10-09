@@ -174,39 +174,4 @@ module.exports = {
       });
     }
   },
-  searchKaryawan: async (req, res) => {
-    try {
-      let whereCond = ``;
-      const searchInput = req.query.searchInput; // Menerima input pencarian dari frontend
-      // Jika ada input pencarian, bangun kondisi pencarian berdasarkan input tersebut
-      if (searchInput) {
-        // Menggunakan LIKE untuk mencocokkan sebagian dari nilai pada beberapa kolom
-        whereCond = `WHERE tb_m_employees.nama LIKE '%${searchInput}%'`;
-      }
-      // Bangun kueri SQL dengan kondisi pencarian dinamis
-      let q = `SELECT *, profile AS photoUrl FROM tb_m_employees ${whereCond}`;
-      // console.log(q);
-
-      const client = await database.connect();
-      let usersQuery = await client.query(q);
-      let usersData = usersQuery.rows;
-      client.release();
-      if (usersData.length === 0) {
-        // Jika tidak ada karyawan yang ditemukan, kirim respon khusus
-        res.status(404).json({
-          message: "Karyawan tidak ditemukan",
-        });
-      } else {
-        // Jika ada karyawan yang ditemukan, kirim data karyawan
-        res.status(201).json({
-          message: "Success Search Data",
-          data: usersData,
-        });
-      }
-    } catch (error) {
-      res.status(500).json({
-        message: "Failed to Get Users Data",
-      });
-    }
-  },
 };

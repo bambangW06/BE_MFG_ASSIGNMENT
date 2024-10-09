@@ -3,26 +3,28 @@ var database = require("../config/storage");
 module.exports = {
   getHistory: async (req, res) => {
     try {
-      // Deklarasi array untuk menampung data yang dikelompokkan
-      let redShiftHadir = [];
-      let redShiftLibur = [];
-      let whiteShiftHadir = [];
-      let whiteShiftLibur = [];
+      // Ambil parameter selectedMonth dari query, jika ada
+      const { selectedMonth } = req.query;
 
-      // Query untuk mengambil data dari database
+      // Jika selectedMonth ada, gunakan untuk filter, jika tidak gunakan bulan saat ini
+      const monthCondition = selectedMonth
+        ? `EXTRACT(MONTH FROM a.date_absence) = EXTRACT(MONTH FROM TO_DATE('${selectedMonth}-01', 'YYYY-MM-DD'))`
+        : `EXTRACT(MONTH FROM a.date_absence) = EXTRACT(MONTH FROM CURRENT_DATE)`;
+
+      // Query untuk mengambil data dari database dengan kondisi bulan dinamis
       const q = `
-      SELECT 
-        a.*, 
-        e.shift
-      FROM  
-        tb_m_absences a
-      JOIN 
-        tb_m_employees e ON a.employee_id = e.employee_id
-      WHERE 
-        EXTRACT(MONTH FROM a.date_absence) = EXTRACT(MONTH FROM CURRENT_DATE) -- Hanya entri untuk bulan ini
-      ORDER BY 
-        date_absence DESC;
-    `;
+        SELECT 
+          a.*, 
+          e.shift
+        FROM  
+          tb_m_absences a
+        JOIN 
+          tb_m_employees e ON a.employee_id = e.employee_id
+        WHERE 
+          ${monthCondition} -- Kondisi bulan dinamis
+        ORDER BY 
+          date_absence DESC;
+      `;
 
       const client = await database.connect();
       const userDataQuery = await client.query(q);
@@ -30,6 +32,11 @@ module.exports = {
       client.release();
 
       // Pengelompokan data berdasarkan shift dan status
+      let redShiftHadir = [];
+      let redShiftLibur = [];
+      let whiteShiftHadir = [];
+      let whiteShiftLibur = [];
+
       userData.forEach((item) => {
         if (item.shift === "Red") {
           if (item.status === "Hadir") {
@@ -46,13 +53,7 @@ module.exports = {
         }
       });
 
-      // Log data yang dikelompokkan untuk memeriksa
-      console.log("Red Shift Hadir:", redShiftHadir);
-      console.log("Red Shift Libur:", redShiftLibur);
-      console.log("White Shift Hadir:", whiteShiftHadir);
-      console.log("White Shift Libur:", whiteShiftLibur);
-
-      // Mengembalikan data yang dikelompokkan sebagai respons JSON
+      // Kembalikan data yang dikelompokkan sebagai respons JSON
       res.status(200).json({
         message: "Success to Get Data",
         data: {
