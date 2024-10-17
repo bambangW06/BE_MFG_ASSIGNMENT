@@ -27,6 +27,7 @@ var laporanHarian = require("./LaporanHarian/laporan");
 var category = require("./Category/category");
 var stdCounter = require("./StdCounter/stdCounter");
 var problem = require("./problem/problem");
+var OEE = require("./LaporanHarian/oee");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -55,4 +56,5 @@ router.use("/tools", laporanHarian);
 router.use("/category", category);
 router.use("/laporan", stdCounter);
 router.use("/problem", problem);
+router.use("/oee", OEE);
 module.exports = router;

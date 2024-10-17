@@ -95,7 +95,7 @@ module.exports = {
   getReportReg: async (req, res) => {
     try {
       const selectedDate = req.query.selectedDate;
-      console.log("tanggalDariFrontEnd", selectedDate);
+      // console.log("tanggalDariFrontEnd", selectedDate);
 
       // Gunakan tanggal dari front-end jika ada, jika tidak, gunakan hari ini
       const hariIni = selectedDate
@@ -106,12 +106,12 @@ module.exports = {
       const mulai = hariIni; // tetap dalam Asia/Jakarta
       const selesai = hariIni.clone().add(1, "day");
 
-      console.log(
-        "Rentang waktu (Asia/Jakarta):",
-        mulai.format("YYYY-MM-DD HH:mm:ss"),
-        "sampai",
-        selesai.format("YYYY-MM-DD HH:mm:ss")
-      );
+      // console.log(
+      //   "Rentang waktu (Asia/Jakarta):",
+      //   mulai.format("YYYY-MM-DD HH:mm:ss"),
+      //   "sampai",
+      //   selesai.format("YYYY-MM-DD HH:mm:ss")
+      // );
 
       const q =
         "SELECT * FROM tb_r_regrind_reports WHERE created_dt AT TIME ZONE 'Asia/Jakarta' >= $1 AND created_dt AT TIME ZONE 'Asia/Jakarta' < $2";
@@ -119,7 +119,7 @@ module.exports = {
       const userDataQuery = await client.query(q, [mulai, selesai]);
       const userData = userDataQuery.rows;
       client.release();
-      console.log(userData);
+      // console.log(userData);
 
       res.status(200).json({
         message: "Success to Get Data",
