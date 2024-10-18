@@ -68,31 +68,41 @@ module.exports = {
 
       let start_date, end_date;
 
-      // Jika selectedDate ada, gunakan itu, jika tidak, gunakan tanggal hari ini
+      // Jika selectedDate ada, gunakan itu
       if (selectedDate) {
         start_date = moment(selectedDate)
-          .startOf("day")
-          .add(7, "hours")
+          .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada selectedDate
           .format("YYYY-MM-DD HH:mm:ss");
 
         end_date = moment(selectedDate)
-          .add(1, "day")
-          .startOf("day")
-          .add(7, "hours")
+          .add(1, "days") // Tambah satu hari untuk end_date
+          .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada hari berikutnya
           .format("YYYY-MM-DD HH:mm:ss");
       } else {
-        // Tanggal hari ini pukul 07:00
-        start_date = moment()
-          .startOf("day")
-          .add(7, "hours")
-          .format("YYYY-MM-DD HH:mm:ss");
+        // Tanggal hari ini
+        const today = moment();
+        if (today.hour() < 7) {
+          // Jika masih sebelum jam 07:00, ambil dari kemarin
+          start_date = today
+            .subtract(1, "days") // Mundur satu hari
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 kemarin
+            .format("YYYY-MM-DD HH:mm:ss");
 
-        // Tanggal besok pukul 07:00
-        end_date = moment()
-          .add(1, "day")
-          .startOf("day")
-          .add(7, "hours")
-          .format("YYYY-MM-DD HH:mm:ss");
+          end_date = today
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 hari ini
+            .add(1, "days") // Tambah satu hari untuk end_date
+            .format("YYYY-MM-DD HH:mm:ss"); // Set ke jam 07:00 pada hari berikutnya
+        } else {
+          // Ambil data hari ini
+          start_date = today
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 hari ini
+            .format("YYYY-MM-DD HH:mm:ss");
+
+          end_date = today
+            .add(1, "days") // Tambah satu hari untuk end_date
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada hari berikutnya
+            .format("YYYY-MM-DD HH:mm:ss");
+        }
       }
 
       if (modalType === "category") {
@@ -216,35 +226,47 @@ module.exports = {
       const selectedDate = req.query.selectedDate;
       console.log("selectedDate", selectedDate);
 
-      // Jika selectedDate tidak ada atau kosong, gunakan tanggal hari ini (today)
       let start_date, end_date;
 
-      // Jika selectedDate ada, gunakan itu, jika tidak, gunakan tanggal hari ini
+      // Jika selectedDate ada, gunakan itu
       if (selectedDate) {
         start_date = moment(selectedDate)
-          .startOf("day")
-          .add(7, "hours")
+          .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada selectedDate
           .format("YYYY-MM-DD HH:mm:ss");
 
         end_date = moment(selectedDate)
-          .add(1, "day")
-          .startOf("day")
-          .add(7, "hours")
+          .add(1, "days") // Tambah satu hari untuk end_date
+          .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada hari berikutnya
           .format("YYYY-MM-DD HH:mm:ss");
       } else {
-        // Tanggal hari ini pukul 07:00
-        start_date = moment()
-          .startOf("day")
-          .add(7, "hours")
-          .format("YYYY-MM-DD HH:mm:ss");
+        // Tanggal hari ini
+        const today = moment();
+        if (today.hour() < 7) {
+          // Jika masih sebelum jam 07:00, ambil dari kemarin
+          start_date = today
+            .subtract(1, "days") // Mundur satu hari
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 kemarin
+            .format("YYYY-MM-DD HH:mm:ss");
 
-        // Tanggal besok pukul 07:00
-        end_date = moment()
-          .add(1, "day")
-          .startOf("day")
-          .add(7, "hours")
-          .format("YYYY-MM-DD HH:mm:ss");
+          end_date = today
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 hari ini
+            .add(1, "days") // Tambah satu hari untuk end_date
+            .format("YYYY-MM-DD HH:mm:ss"); // Set ke jam 07:00 pada hari berikutnya
+        } else {
+          // Ambil data hari ini
+          start_date = today
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 hari ini
+            .format("YYYY-MM-DD HH:mm:ss");
+
+          end_date = today
+            .add(1, "days") // Tambah satu hari untuk end_date
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada hari berikutnya
+            .format("YYYY-MM-DD HH:mm:ss");
+        }
       }
+
+      // console.log("Start Date:", start_date);
+      // console.log("End Date:", end_date);
 
       // Query untuk tb_r_in_process
       const queryInProcess = `SELECT 
@@ -295,6 +317,10 @@ module.exports = {
 
       let inProcessData = inProcessDataQuery.rows;
       let nextProsesData = nextProsesDataQuery.rows;
+
+      // Log hasil query
+      console.log("In Process Data:", inProcessData);
+      console.log("Next Process Data:", nextProsesData);
 
       // Format created_dt menjadi "YYYY-MM-DD"
       inProcessData = inProcessData.map((item) => {
