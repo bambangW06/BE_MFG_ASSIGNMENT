@@ -60,15 +60,38 @@ module.exports = {
   },
   getOEE: async (req, res) => {
     try {
+      // Dapatkan shift dari parameter URL
       const shift = req.params.shift;
 
-      //   console.log("shift", shift);
-      const q = `SELECT * FROM tb_r_oee WHERE shift = $1 AND DATE(created_dt) = CURRENT_DATE;`;
+      // Dapatkan waktu sekarang dalam timezone Asia/Jakarta
+      const now = moment().tz("Asia/Jakarta");
+
+      // Tentukan rentang waktu dari tanggal 18 jam 07:00 hingga tanggal 19 jam 07:00
+      const startShift = now
+        .clone()
+        .subtract(1, "day")
+        .startOf("day")
+        .add(7, "hours"); // 07:00 hari sebelumnya
+      const endShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+
+      // Log rentang waktu untuk debugging
+      // console.log(
+      //   "Rentang waktu shift:",
+      //   startShift.format("YYYY-MM-DD HH:mm:ss"),
+      //   "sampai",
+      //   endShift.format("YYYY-MM-DD HH:mm:ss")
+      // );
+
+      // Query untuk mengambil data OEE berdasarkan shift dan rentang waktu
+      const q = `SELECT * FROM tb_r_oee WHERE shift = $1 AND created_dt BETWEEN $2 AND $3;`;
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [shift]);
+      const userDataQuery = await client.query(q, [
+        shift,
+        startShift.format(),
+        endShift.format(),
+      ]);
       const userData = userDataQuery.rows;
       client.release();
-      //   console.log("userData", userData);
 
       res.status(200).json({ message: "Success", data: userData });
     } catch (error) {
@@ -83,29 +106,48 @@ module.exports = {
       const client = await database.connect();
       let q;
 
+      // Dapatkan waktu sekarang
+      const now = moment().tz("Asia/Jakarta");
+
+      let startShift, endShift;
+
       if (shift === "Siang") {
-        // Shift Siang: 07:00 hingga 20:00 hari ini
-        q = `
-          SELECT a.*, e.jabatan
-          FROM tb_m_absences a
-          JOIN tb_m_employees e ON a.employee_id = e.employee_id
-          WHERE a.created_dt >= CURRENT_DATE + INTERVAL '7 hours'
-            AND a.created_dt < CURRENT_DATE + INTERVAL '20 hours';
-        `;
+        // Shift Siang: 07:00 hingga 20:00 pada hari ini
+        startShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+        endShift = now.clone().startOf("day").add(20, "hours"); // 20:00 hari ini
       } else if (shift === "Malam") {
-        // Shift Malam: 20:00 hari ini hingga 07:00 besok
-        q = `
-          SELECT a.*, e.jabatan
-          FROM tb_m_absences a
-          JOIN tb_m_employees e ON a.employee_id = e.employee_id
-          WHERE a.created_dt >= CURRENT_DATE + INTERVAL '20 hours'
-            AND a.created_dt < (CURRENT_DATE + INTERVAL '1 day') + INTERVAL '7 hours';
-        `;
+        // Shift Malam: 20:00 hari kemarin hingga 07:00 hari ini
+        startShift = now
+          .clone()
+          .subtract(1, "day")
+          .startOf("day")
+          .add(20, "hours"); // 20:00 kemarin
+        endShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
       } else {
-        return res.status(400).json({ message: "Invalid shift" });
+        return res.status(400).json({ message: "Shift tidak valid" });
       }
 
-      const absensiDataQuery = await client.query(q);
+      // Log rentang waktu untuk debugging
+      console.log(
+        `Rentang waktu Shift ${shift}:`,
+        startShift.format("YYYY-MM-DD HH:mm:ss"),
+        "hingga",
+        endShift.format("YYYY-MM-DD HH:mm:ss")
+      );
+
+      // Query untuk mengambil data absensi berdasarkan rentang waktu
+      q = `
+        SELECT a.*, e.jabatan
+        FROM tb_m_absences a
+        JOIN tb_m_employees e ON a.employee_id = e.employee_id
+        WHERE a.created_dt >= $1
+          AND a.created_dt < $2;
+      `;
+
+      const absensiDataQuery = await client.query(q, [
+        startShift.format(),
+        endShift.format(),
+      ]);
       const absensiData = absensiDataQuery.rows;
       client.release();
 

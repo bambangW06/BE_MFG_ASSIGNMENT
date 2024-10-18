@@ -95,16 +95,29 @@ module.exports = {
   getReportReg: async (req, res) => {
     try {
       const selectedDate = req.query.selectedDate;
-      // console.log("tanggalDariFrontEnd", selectedDate);
+      console.log("selectedDate:", selectedDate);
 
-      // Gunakan tanggal dari front-end jika ada, jika tidak, gunakan hari ini
+      // Dapatkan waktu sekarang
+      let now = moment().tz("Asia/Jakarta");
+
+      // Jika selectedDate ada, gunakan tanggal tersebut, jika tidak, gunakan waktu sekarang
       const hariIni = selectedDate
-        ? moment(selectedDate).tz("Asia/Jakarta").startOf("day").add(7, "hours")
-        : moment().tz("Asia/Jakarta").startOf("day").add(7, "hours");
+        ? moment(selectedDate).tz("Asia/Jakarta").startOf("day")
+        : now.startOf("day");
 
-      // Rentang waktu tanpa konversi ke UTC, tetap di timezone Asia/Jakarta
-      const mulai = hariIni; // tetap dalam Asia/Jakarta
-      const selesai = hariIni.clone().add(1, "day");
+      // Variabel untuk menentukan shift
+      let mulai, selesai;
+
+      // Menentukan shift berdasarkan waktu saat ini
+      const currentHour = now.hour();
+      if (currentHour < 7) {
+        // Sebelum jam 07:00, gunakan tanggal kemarin
+        hariIni.subtract(1, "days");
+      }
+
+      // Atur rentang waktu
+      mulai = hariIni.clone().add(7, "hours"); // 07:00
+      selesai = mulai.clone().add(1, "day"); // 07:00 keesokan harinya
 
       // console.log(
       //   "Rentang waktu (Asia/Jakarta):",
