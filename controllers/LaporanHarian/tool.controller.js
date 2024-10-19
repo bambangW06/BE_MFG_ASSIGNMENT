@@ -95,15 +95,15 @@ module.exports = {
   getReportReg: async (req, res) => {
     try {
       const selectedDate = req.query.selectedDate;
-      console.log("selectedDate:", selectedDate);
+      // console.log("selectedDate:", selectedDate);
 
       // Dapatkan waktu sekarang
       let now = moment().tz("Asia/Jakarta");
 
       // Jika selectedDate ada, gunakan tanggal tersebut, jika tidak, gunakan waktu sekarang
-      const hariIni = selectedDate
+      let hariIni = selectedDate
         ? moment(selectedDate).tz("Asia/Jakarta").startOf("day")
-        : now.startOf("day");
+        : now.clone().startOf("day");
 
       // Variabel untuk menentukan shift
       let mulai, selesai;
@@ -111,13 +111,15 @@ module.exports = {
       // Menentukan shift berdasarkan waktu saat ini
       const currentHour = now.hour();
       if (currentHour < 7) {
-        // Sebelum jam 07:00, gunakan tanggal kemarin
+        // Sebelum jam 07:00, gunakan tanggal kemarin 07:00 hingga hari ini 07:00
         hariIni.subtract(1, "days");
+        mulai = hariIni.clone().add(7, "hours"); // 07:00 kemarin
+        selesai = mulai.clone().add(1, "day"); // 07:00 hari ini
+      } else {
+        // Setelah jam 07:00, gunakan tanggal hari ini 07:00 hingga besok 07:00
+        mulai = hariIni.clone().add(7, "hours"); // 07:00 hari ini
+        selesai = mulai.clone().add(1, "day"); // 07:00 besok
       }
-
-      // Atur rentang waktu
-      mulai = hariIni.clone().add(7, "hours"); // 07:00
-      selesai = mulai.clone().add(1, "day"); // 07:00 keesokan harinya
 
       // console.log(
       //   "Rentang waktu (Asia/Jakarta):",

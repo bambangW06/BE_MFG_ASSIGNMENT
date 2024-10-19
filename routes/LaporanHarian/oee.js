@@ -7,7 +7,7 @@ const {
 var router = require("express").Router();
 
 router.post("/add", addOEE);
-router.get("/get/:shift", getOEE);
-router.get("/absensi/:shift", getAbsensi);
+router.get("/get", getOEE);
+router.get("/absensi", getAbsensi);
 
 module.exports = router;
