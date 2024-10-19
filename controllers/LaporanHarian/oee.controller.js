@@ -60,27 +60,56 @@ module.exports = {
   },
   getOEE: async (req, res) => {
     try {
-      // Dapatkan shift dari parameter URL
-      const shift = req.params.shift;
-
+      const { shift, date } = req.query;
       // Dapatkan waktu sekarang dalam timezone Asia/Jakarta
       const now = moment().tz("Asia/Jakarta");
 
-      // Tentukan rentang waktu dari tanggal 18 jam 07:00 hingga tanggal 19 jam 07:00
-      const startShift = now
-        .clone()
-        .subtract(1, "day")
-        .startOf("day")
-        .add(7, "hours"); // 07:00 hari sebelumnya
-      const endShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+      // Variabel untuk rentang waktu shift
+      let startShift, endShift;
 
-      // Log rentang waktu untuk debugging
-      // console.log(
-      //   "Rentang waktu shift:",
-      //   startShift.format("YYYY-MM-DD HH:mm:ss"),
-      //   "sampai",
-      //   endShift.format("YYYY-MM-DD HH:mm:ss")
-      // );
+      // Logika untuk mengambil rentang waktu berdasarkan parameter
+      if (date) {
+        // Jika date ada, gunakan tanggal tersebut
+        const selectedDate = moment.tz(date, "Asia/Jakarta");
+
+        if (shift === "Siang") {
+          startShift = selectedDate.clone().startOf("day").add(7, "hours"); // 07:00 pada tanggal yang diberikan
+          endShift = selectedDate.clone().startOf("day").add(20, "hours"); // 20:00 pada tanggal yang diberikan
+        } else if (shift === "Malam") {
+          startShift = selectedDate.clone().startOf("day").add(20, "hours"); // 20:00 pada tanggal yang diberikan
+          endShift = selectedDate
+            .clone()
+            .add(1, "day")
+            .startOf("day")
+            .add(7, "hours"); // 07:00 besok
+        } else {
+          return res.status(400).json({ message: "Shift tidak valid" });
+        }
+      } else {
+        // Jika date tidak ada, gunakan logika berdasarkan waktu sekarang
+        const currentHour = now.hour();
+
+        if (currentHour < 7) {
+          // Sebelum jam 7 pagi, gunakan rentang shift dari kemarin jam 7 pagi hingga hari ini jam 7 pagi
+          startShift = now
+            .clone()
+            .subtract(1, "day")
+            .startOf("day")
+            .add(7, "hours"); // 07:00 kemarin
+          endShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+        } else {
+          // Setelah jam 7 pagi, gunakan rentang shift dari hari ini jam 7 pagi hingga besok jam 7 pagi
+          startShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+          endShift = now.clone().add(1, "day").startOf("day").add(7, "hours"); // 07:00 besok
+        }
+      }
+
+      console.log(
+        "Rentang waktu shift:",
+        startShift.format("YYYY-MM-DD HH:mm:ss"),
+        "sampai",
+        endShift.format("YYYY-MM-DD HH:mm:ss")
+      );
 
       // Query untuk mengambil data OEE berdasarkan shift dan rentang waktu
       const q = `SELECT * FROM tb_r_oee WHERE shift = $1 AND created_dt BETWEEN $2 AND $3;`;
@@ -102,29 +131,48 @@ module.exports = {
 
   getAbsensi: async (req, res) => {
     try {
-      const shift = req.params.shift;
+      const { shift, date } = req.query; // Ambil shift dan date dari query
+      console.log("shift", shift);
+      console.log("date", date);
+
       const client = await database.connect();
       let q;
 
-      // Dapatkan waktu sekarang
+      // Dapatkan waktu sekarang dalam timezone Asia/Jakarta
       const now = moment().tz("Asia/Jakarta");
 
       let startShift, endShift;
 
-      if (shift === "Siang") {
-        // Shift Siang: 07:00 hingga 20:00 pada hari ini
-        startShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
-        endShift = now.clone().startOf("day").add(20, "hours"); // 20:00 hari ini
-      } else if (shift === "Malam") {
-        // Shift Malam: 20:00 hari kemarin hingga 07:00 hari ini
-        startShift = now
-          .clone()
-          .subtract(1, "day")
-          .startOf("day")
-          .add(20, "hours"); // 20:00 kemarin
-        endShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+      // Logika untuk mengambil data jika date tidak ada
+      if (!date) {
+        if (shift === "Siang") {
+          // Ambil shift siang untuk hari ini
+          startShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+          endShift = now.clone().startOf("day").add(20, "hours"); // 20:00 hari ini
+        } else if (shift === "Malam") {
+          // Ambil shift malam untuk tanggal kemarin
+          startShift = now.clone().startOf("day").add(20, "hours"); // 20:00 hari ini
+          endShift = now.clone().add(1, "days").startOf("day").add(7, "hours"); // 07:00 besok
+        } else {
+          return res.status(400).json({ message: "Shift tidak valid" });
+        }
       } else {
-        return res.status(400).json({ message: "Shift tidak valid" });
+        // Jika date ada, gunakan logika sebelumnya
+        const selectedDate = moment.tz(date, "Asia/Jakarta");
+
+        if (shift === "Siang") {
+          startShift = selectedDate.clone().startOf("day").add(7, "hours"); // 07:00 pada tanggal yang diberikan
+          endShift = selectedDate.clone().startOf("day").add(20, "hours"); // 20:00 pada tanggal yang diberikan
+        } else if (shift === "Malam") {
+          startShift = selectedDate.clone().startOf("day").add(20, "hours"); // 20:00 pada tanggal yang diberikan
+          endShift = selectedDate
+            .clone()
+            .add(1, "day")
+            .startOf("day")
+            .add(7, "hours"); // 07:00 besok
+        } else {
+          return res.status(400).json({ message: "Shift tidak valid" });
+        }
       }
 
       // Log rentang waktu untuk debugging
@@ -137,12 +185,12 @@ module.exports = {
 
       // Query untuk mengambil data absensi berdasarkan rentang waktu
       q = `
-        SELECT a.*, e.jabatan
-        FROM tb_m_absences a
-        JOIN tb_m_employees e ON a.employee_id = e.employee_id
-        WHERE a.created_dt >= $1
-          AND a.created_dt < $2;
-      `;
+            SELECT a.*, e.jabatan
+            FROM tb_m_absences a
+            JOIN tb_m_employees e ON a.employee_id = e.employee_id
+            WHERE a.created_dt >= $1
+              AND a.created_dt < $2;
+        `;
 
       const absensiDataQuery = await client.query(q, [
         startShift.format(),
