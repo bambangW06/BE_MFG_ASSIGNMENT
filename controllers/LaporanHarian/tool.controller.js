@@ -104,29 +104,36 @@ module.exports = {
       let hariIni = selectedDate
         ? moment(selectedDate).tz("Asia/Jakarta").startOf("day")
         : now.clone().startOf("day");
+      console.log("hari ini:", hariIni);
 
-      // Variabel untuk menentukan shift
+      // Variabel untuk menentukan rentang waktu
       let mulai, selesai;
 
-      // Menentukan shift berdasarkan waktu saat ini
-      const currentHour = now.hour();
-      if (currentHour < 7) {
-        // Sebelum jam 07:00, gunakan tanggal kemarin 07:00 hingga hari ini 07:00
-        hariIni.subtract(1, "days");
-        mulai = hariIni.clone().add(7, "hours"); // 07:00 kemarin
-        selesai = mulai.clone().add(1, "day"); // 07:00 hari ini
+      if (selectedDate) {
+        // Jika ada selectedDate, atur mulai dari jam 7 pagi pada tanggal tersebut
+        mulai = hariIni.clone().add(7, "hours"); // 07:00 pada selectedDate
+        selesai = mulai.clone().add(1, "day"); // 07:00 pada hari berikutnya
       } else {
-        // Setelah jam 07:00, gunakan tanggal hari ini 07:00 hingga besok 07:00
-        mulai = hariIni.clone().add(7, "hours"); // 07:00 hari ini
-        selesai = mulai.clone().add(1, "day"); // 07:00 besok
+        // Menentukan shift berdasarkan waktu saat ini
+        const currentHour = now.hour();
+        if (currentHour < 7) {
+          // Sebelum jam 07:00, gunakan tanggal kemarin 07:00 hingga hari ini 07:00
+          hariIni.subtract(1, "days");
+          mulai = hariIni.clone().add(7, "hours"); // 07:00 kemarin
+          selesai = mulai.clone().add(1, "day"); // 07:00 hari ini
+        } else {
+          // Setelah jam 07:00, gunakan tanggal hari ini 07:00 hingga besok 07:00
+          mulai = hariIni.clone().add(7, "hours"); // 07:00 hari ini
+          selesai = mulai.clone().add(1, "day"); // 07:00 besok
+        }
       }
 
-      // console.log(
-      //   "Rentang waktu (Asia/Jakarta):",
-      //   mulai.format("YYYY-MM-DD HH:mm:ss"),
-      //   "sampai",
-      //   selesai.format("YYYY-MM-DD HH:mm:ss")
-      // );
+      console.log(
+        "Rentang waktu (Asia/Jakarta):",
+        mulai.format("YYYY-MM-DD HH:mm:ss"),
+        "sampai",
+        selesai.format("YYYY-MM-DD HH:mm:ss")
+      );
 
       const q =
         "SELECT * FROM tb_r_regrind_reports WHERE created_dt AT TIME ZONE 'Asia/Jakarta' >= $1 AND created_dt AT TIME ZONE 'Asia/Jakarta' < $2";

@@ -123,8 +123,8 @@ module.exports = {
             `;
 
         const values = [time_range, start_date, end_date];
-        console.log("Query:", q);
-        console.log("Values:", values); // Log values
+        // console.log("Query:", q);
+        // console.log("Values:", values); // Log values
         const client = await database.connect();
         const userDataQuery = await client.query(q, values);
         const userData = userDataQuery.rows;
@@ -162,8 +162,8 @@ module.exports = {
         `;
 
         const values = [time_range, start_date, end_date];
-        console.log("Query:", q);
-        console.log("Values:", values); // Log values
+        // console.log("Query:", q);
+        // console.log("Values:", values); // Log values
         const client = await database.connect();
         const userDataQuery = await client.query(q, values);
         const userData = userDataQuery.rows;
@@ -186,8 +186,8 @@ module.exports = {
     try {
       const modalType = req.query.modalType;
       const problem_id = req.query.problem_id;
-      console.log("modalType", modalType);
-      console.log("problem_id", problem_id);
+      // console.log("modalType", modalType);
+      // console.log("problem_id", problem_id);
       if (modalType === "category") {
         const q = `DELETE FROM tb_r_in_process WHERE problem_id = $1`;
 
@@ -224,7 +224,7 @@ module.exports = {
   problemTable: async (req, res) => {
     try {
       const selectedDate = req.query.selectedDate;
-      console.log("selectedDate", selectedDate);
+      // console.log("selectedDate", selectedDate);
 
       let start_date, end_date;
 
@@ -319,8 +319,8 @@ module.exports = {
       let nextProsesData = nextProsesDataQuery.rows;
 
       // Log hasil query
-      console.log("In Process Data:", inProcessData);
-      console.log("Next Process Data:", nextProsesData);
+      // console.log("In Process Data:", inProcessData);
+      // console.log("Next Process Data:", nextProsesData);
 
       // Format created_dt menjadi "YYYY-MM-DD"
       inProcessData = inProcessData.map((item) => {

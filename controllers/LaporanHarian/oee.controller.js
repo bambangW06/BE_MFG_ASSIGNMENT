@@ -63,7 +63,7 @@ module.exports = {
       const { shift, date } = req.query;
       // Dapatkan waktu sekarang dalam timezone Asia/Jakarta
       const now = moment().tz("Asia/Jakarta");
-
+      // const now = moment.tz("2024-10-20 07:01", "Asia/Jakarta"); // Simulasi waktu
       // Variabel untuk rentang waktu shift
       let startShift, endShift;
 
@@ -132,29 +132,62 @@ module.exports = {
   getAbsensi: async (req, res) => {
     try {
       const { shift, date } = req.query; // Ambil shift dan date dari query
-      console.log("shift", shift);
-      console.log("date", date);
+      // console.log("shift :", shift);
+      // console.log("date :", date);
 
       const client = await database.connect();
       let q;
 
       // Dapatkan waktu sekarang dalam timezone Asia/Jakarta
       const now = moment().tz("Asia/Jakarta");
+      // const now = moment.tz("2024-10-20 07:01", "Asia/Jakarta"); // Simulasi waktu
 
       let startShift, endShift;
 
       // Logika untuk mengambil data jika date tidak ada
-      if (!date) {
-        if (shift === "Siang") {
-          // Ambil shift siang untuk hari ini
-          startShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
-          endShift = now.clone().startOf("day").add(20, "hours"); // 20:00 hari ini
-        } else if (shift === "Malam") {
-          // Ambil shift malam untuk tanggal kemarin
-          startShift = now.clone().startOf("day").add(20, "hours"); // 20:00 hari ini
-          endShift = now.clone().add(1, "days").startOf("day").add(7, "hours"); // 07:00 besok
+      if (!date || date.trim() === "") {
+        if (now.hour() < 7) {
+          // Jika sekarang sebelum jam 07:00
+          if (shift === "Siang") {
+            // Ambil shift siang untuk tanggal kemarin
+            startShift = now
+              .clone()
+              .subtract(1, "days")
+              .startOf("day")
+              .add(7, "hours"); // 07:00 kemarin
+            endShift = now
+              .clone()
+              .subtract(1, "days")
+              .startOf("day")
+              .add(20, "hours"); // 20:00 kemarin
+          } else if (shift === "Malam") {
+            // Ambil shift malam untuk tanggal kemarin hingga hari ini
+            startShift = now
+              .clone()
+              .subtract(1, "days")
+              .startOf("day")
+              .add(20, "hours"); // 20:00 kemarin
+            endShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+          } else {
+            return res.status(400).json({ message: "Shift tidak valid" });
+          }
         } else {
-          return res.status(400).json({ message: "Shift tidak valid" });
+          // Jika sekarang setelah jam 07:00
+          if (shift === "Siang") {
+            // Ambil shift siang untuk hari ini
+            startShift = now.clone().startOf("day").add(7, "hours"); // 07:00 hari ini
+            endShift = now.clone().startOf("day").add(20, "hours"); // 20:00 hari ini
+          } else if (shift === "Malam") {
+            // Ambil shift malam untuk hari ini hingga besok
+            startShift = now.clone().startOf("day").add(20, "hours"); // 20:00 hari ini
+            endShift = now
+              .clone()
+              .add(1, "days")
+              .startOf("day")
+              .add(7, "hours"); // 07:00 besok
+          } else {
+            return res.status(400).json({ message: "Shift tidak valid" });
+          }
         }
       } else {
         // Jika date ada, gunakan logika sebelumnya
@@ -176,12 +209,12 @@ module.exports = {
       }
 
       // Log rentang waktu untuk debugging
-      console.log(
-        `Rentang waktu Shift ${shift}:`,
-        startShift.format("YYYY-MM-DD HH:mm:ss"),
-        "hingga",
-        endShift.format("YYYY-MM-DD HH:mm:ss")
-      );
+      // console.log(
+      //   `Rentang waktu Shift ${shift}:`,
+      //   startShift.format("YYYY-MM-DD HH:mm:ss"),
+      //   "hingga",
+      //   endShift.format("YYYY-MM-DD HH:mm:ss")
+      // );
 
       // Query untuk mengambil data absensi berdasarkan rentang waktu
       q = `
