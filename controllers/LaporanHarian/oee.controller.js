@@ -121,6 +121,7 @@ module.exports = {
       ]);
       const userData = userDataQuery.rows;
       client.release();
+      console.log("userData", userData);
 
       res.status(200).json({ message: "Success", data: userData });
     } catch (error) {
