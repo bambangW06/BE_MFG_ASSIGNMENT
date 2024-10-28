@@ -35,7 +35,10 @@ module.exports = {
         time_delay,
       } = req.body;
 
-      const created_dt = new Date(); // Current timestamp
+      // Menggunakan moment untuk timestamp dengan zona waktu "Asia/Jakarta"
+      const created_dt = moment()
+        .tz("Asia/Jakarta")
+        .format("YYYY-MM-DD HH:mm:ss");
 
       // Fungsi untuk mendapatkan ID terakhir dan menambah 1
       const getNextId = async (client) => {
@@ -52,7 +55,7 @@ module.exports = {
 
       // Query untuk upsert berdasarkan kombinasi time_range dan tanggal
       const q = `
-        INSERT INTO tb_r_regrind_reports (report_id, created_dt, time_range, from_gel, penambahan, reg_set, tool_delay, time_delay)
+        INSERT INTO tb_r_regrind_reports (report_id,  time_range, from_gel, penambahan, reg_set, tool_delay, time_delay, created_dt)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (time_range, DATE(created_dt)) DO UPDATE
         SET
@@ -66,13 +69,13 @@ module.exports = {
 
       const values = [
         nextReportId, // ID yang baru di-generate
-        created_dt,
         time_range,
         from_gel,
         penambahan,
         reg_set,
         tool_delay,
         time_delay,
+        created_dt,
       ];
 
       const userDataQuery = await client.query(q, values);

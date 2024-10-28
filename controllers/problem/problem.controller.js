@@ -3,9 +3,14 @@ const moment = require("moment-timezone");
 module.exports = {
   addProblem: async (req, res) => {
     try {
+      const created_dt = moment()
+        .tz("Asia/Jakarta")
+        .format("YYYY-MM-DD HH:mm:ss");
+      // console.log("created_dt", created_dt);
+
       const { category_id, time_range, problem_nm, waktu } = req.body;
-      const q = `INSERT INTO tb_r_in_process (category_id, time_range, problem_nm, waktu) VALUES ($1, $2, $3, $4) RETURNING *`;
-      const values = [category_id, time_range, problem_nm, waktu];
+      const q = `INSERT INTO tb_r_in_process (category_id, time_range, problem_nm, waktu, created_dt) VALUES ($1, $2, $3, $4, $5) RETURNING *`;
+      const values = [category_id, time_range, problem_nm, waktu, created_dt];
       const client = await database.connect();
       const userDataQuery = await client.query(q, values);
       const userData = userDataQuery.rows;
@@ -23,6 +28,11 @@ module.exports = {
   },
   addNextProcess: async (req, res) => {
     try {
+      const created_dt = moment()
+        .tz("Asia/Jakarta")
+        .format("YYYY-MM-DD HH:mm:ss");
+
+      console.log("created_dt", created_dt);
       const {
         line_id,
         machine_id,
@@ -31,7 +41,7 @@ module.exports = {
         problem_nm,
         act_counter,
       } = req.body;
-      const q = `INSERT INTO tb_r_next_process (line_id, machine_id, tool_id, time_range, problem_nm, act_counter) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`;
+      const q = `INSERT INTO tb_r_next_process (line_id, machine_id, tool_id, time_range, problem_nm, act_counter, created_dt) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
       const values = [
         line_id,
         machine_id,
@@ -39,6 +49,7 @@ module.exports = {
         time_range,
         problem_nm,
         act_counter,
+        created_dt,
       ];
       const client = await database.connect();
       const userDataQuery = await client.query(q, values);
@@ -224,49 +235,41 @@ module.exports = {
   problemTable: async (req, res) => {
     try {
       const selectedDate = req.query.selectedDate;
-      // console.log("selectedDate", selectedDate);
-
       let start_date, end_date;
 
       // Jika selectedDate ada, gunakan itu
       if (selectedDate) {
         start_date = moment(selectedDate)
-          .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada selectedDate
+          .set({ hour: 7, minute: 0, second: 0, millisecond: 0 })
           .format("YYYY-MM-DD HH:mm:ss");
 
         end_date = moment(selectedDate)
-          .add(1, "days") // Tambah satu hari untuk end_date
-          .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada hari berikutnya
+          .add(1, "days")
+          .set({ hour: 7, minute: 0, second: 0, millisecond: 0 })
           .format("YYYY-MM-DD HH:mm:ss");
       } else {
-        // Tanggal hari ini
         const today = moment();
         if (today.hour() < 7) {
-          // Jika masih sebelum jam 07:00, ambil dari kemarin
           start_date = today
-            .subtract(1, "days") // Mundur satu hari
-            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 kemarin
+            .subtract(1, "days")
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 })
             .format("YYYY-MM-DD HH:mm:ss");
 
           end_date = today
-            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 hari ini
-            .add(1, "days") // Tambah satu hari untuk end_date
-            .format("YYYY-MM-DD HH:mm:ss"); // Set ke jam 07:00 pada hari berikutnya
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 })
+            .add(1, "days")
+            .format("YYYY-MM-DD HH:mm:ss");
         } else {
-          // Ambil data hari ini
           start_date = today
-            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 hari ini
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 })
             .format("YYYY-MM-DD HH:mm:ss");
 
           end_date = today
-            .add(1, "days") // Tambah satu hari untuk end_date
-            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 }) // Set ke jam 07:00 pada hari berikutnya
+            .add(1, "days")
+            .set({ hour: 7, minute: 0, second: 0, millisecond: 0 })
             .format("YYYY-MM-DD HH:mm:ss");
         }
       }
-
-      // console.log("Start Date:", start_date);
-      // console.log("End Date:", end_date);
 
       // Query untuk tb_r_in_process
       const queryInProcess = `SELECT 
@@ -318,28 +321,37 @@ module.exports = {
       let inProcessData = inProcessDataQuery.rows;
       let nextProsesData = nextProsesDataQuery.rows;
 
-      // Log hasil query
-      // console.log("In Process Data:", inProcessData);
-      // console.log("Next Process Data:", nextProsesData);
+      // Fungsi untuk memeriksa shift malam dan mengubah tanggal jika perlu
+      const adjustNightShiftDate = (created_dt) => {
+        const date = moment(created_dt);
+        const hour = date.hour();
 
-      // Format created_dt menjadi "YYYY-MM-DD"
+        // Jika berada antara pukul 00:00 sampai 06:59, ubah tanggal ke hari sebelumnya
+        if (hour < 7) {
+          return date.subtract(1, "day").format("YYYY-MM-DD");
+        }
+
+        // Selain itu, pertahankan tanggal
+        return date.format("YYYY-MM-DD");
+      };
+
+      // Sesuaikan tanggal untuk shift malam
       inProcessData = inProcessData.map((item) => {
         return {
           ...item,
-          created_dt: moment(item.created_dt).format("YYYY-MM-DD"),
+          created_dt: adjustNightShiftDate(item.created_dt),
         };
       });
 
       nextProsesData = nextProsesData.map((item) => {
         return {
           ...item,
-          created_dt: moment(item.created_dt).format("YYYY-MM-DD"),
+          created_dt: adjustNightShiftDate(item.created_dt),
         };
       });
 
       client.release();
 
-      // Kirimkan data dari kedua tabel secara terpisah
       res.status(200).json({
         message: "Success to Get Data",
         data: {

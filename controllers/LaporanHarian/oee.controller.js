@@ -5,6 +5,9 @@ module.exports = {
   addOEE: async (req, res) => {
     try {
       const { shift, actMp, jamKerja, total, oee } = req.body;
+      const created_dt = moment()
+        .tz("Asia/Jakarta")
+        .format("YYYY-MM-DD HH:mm:ss");
 
       const client = await database.connect();
 
@@ -35,8 +38,8 @@ module.exports = {
       } else {
         // Jika data belum ada, lakukan insert
         const insertQuery = `
-          INSERT INTO tb_r_oee (shift, act_mp, jam_kerja, total_reg_set, oee_rslt) 
-          VALUES ($1, $2, $3, $4, $5) 
+          INSERT INTO tb_r_oee (shift, act_mp, jam_kerja, total_reg_set, oee_rslt, created_dt) 
+          VALUES ($1, $2, $3, $4, $5 , $6) 
           RETURNING *
         `;
         userData = await client.query(insertQuery, [
@@ -45,6 +48,7 @@ module.exports = {
           jamKerja,
           total,
           oee,
+          created_dt,
         ]);
       }
 
@@ -121,7 +125,7 @@ module.exports = {
       ]);
       const userData = userDataQuery.rows;
       client.release();
-      console.log("userData", userData);
+      // console.log("userData", userData);
 
       res.status(200).json({ message: "Success", data: userData });
     } catch (error) {
