@@ -27,6 +27,7 @@ module.exports = {
   addReportReg: async (req, res) => {
     try {
       const {
+        shift,
         time_range,
         from_gel,
         penambahan,
@@ -55,8 +56,8 @@ module.exports = {
 
       // Query untuk upsert berdasarkan kombinasi time_range dan tanggal
       const q = `
-        INSERT INTO tb_r_regrind_reports (report_id,  time_range, from_gel, penambahan, reg_set, tool_delay, time_delay, created_dt)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO tb_r_regrind_reports (report_id,  time_range, from_gel, penambahan, reg_set, tool_delay, time_delay, created_dt, shift)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
         ON CONFLICT (time_range, DATE(created_dt)) DO UPDATE
         SET
           from_gel = EXCLUDED.from_gel,
@@ -76,6 +77,7 @@ module.exports = {
         tool_delay,
         time_delay,
         created_dt,
+        shift,
       ];
 
       const userDataQuery = await client.query(q, values);
