@@ -5,18 +5,32 @@ module.exports = {
   addOEE: async (req, res) => {
     try {
       const { shift, actMp, jamKerja, total, oee } = req.body;
-      const created_dt = moment()
-        .tz("Asia/Jakarta")
-        .format("YYYY-MM-DD HH:mm:ss");
+
+      // Ambil waktu saat ini dalam timezone "Asia/Jakarta"
+      let created_dt = moment().tz("Asia/Jakarta");
+
+      // Cek apakah shift malam dan jam input adalah antara jam 00:00 sampai sebelum jam 07:00
+      if (shift === "Malam" && created_dt.hour() < 7) {
+        // Mundurkan tanggal menjadi hari sebelumnya karena masih dalam range shift malam sebelumnya
+        created_dt.subtract(1, "days");
+      }
+
+      // Format created_dt untuk keperluan penyimpanan
+      created_dt = created_dt.format("YYYY-MM-DD HH:mm:ss");
 
       const client = await database.connect();
 
-      // Cek apakah data untuk shift tertentu sudah ada hari ini
+      // Cek apakah data untuk shift tertentu sudah ada pada tanggal hari ini (atau tanggal yang sudah disesuaikan)
       const checkQuery = `
         SELECT * FROM tb_r_oee 
-        WHERE shift = $1 AND DATE(created_dt) = CURRENT_DATE
+        WHERE shift = $1 AND created_dt::date = $2
       `;
-      const checkResult = await client.query(checkQuery, [shift]);
+
+      // Lakukan pengecekan berdasarkan shift dan tanggal created_dt
+      const checkResult = await client.query(checkQuery, [
+        shift,
+        created_dt.split(" ")[0],
+      ]);
 
       let userData;
 
@@ -25,7 +39,7 @@ module.exports = {
         const updateQuery = `
           UPDATE tb_r_oee 
           SET act_mp = $2, jam_kerja = $3, total_reg_set = $4, oee_rslt = $5 
-          WHERE shift = $1 AND DATE(created_dt) = CURRENT_DATE 
+          WHERE shift = $1 AND created_dt::date = $6
           RETURNING *
         `;
         userData = await client.query(updateQuery, [
@@ -34,6 +48,7 @@ module.exports = {
           jamKerja,
           total,
           oee,
+          created_dt.split(" ")[0], // Hanya gunakan bagian tanggal dari created_dt untuk pengecekan
         ]);
       } else {
         // Jika data belum ada, lakukan insert
@@ -54,14 +69,13 @@ module.exports = {
 
       client.release();
 
-      //   console.log(userData.rows);
-
       res.status(201).json({ message: "Success" });
     } catch (error) {
       console.log(error);
       res.status(500).json({ message: "Failed" });
     }
   },
+
   getOEE: async (req, res) => {
     try {
       const { shift, date } = req.query;
