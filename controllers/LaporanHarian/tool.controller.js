@@ -208,3 +208,35 @@ module.exports = {
     }
   },
 };
+// BEGIN;
+
+// -- Buat tabel cadangan
+// CREATE TABLE tb_r_regrind_reports_backup AS
+// SELECT * FROM tb_r_regrind_reports;
+
+// -- Hapus tabel utama
+// DROP TABLE tb_r_regrind_reports;
+
+// -- Buat ulang tabel utama
+// CREATE TABLE tb_r_regrind_reports (
+//     report_id SERIAL PRIMARY KEY,
+//     time_range VARCHAR(50),
+//     from_gel int,
+//     penambahan int,
+//     reg_set int,
+//     tool_delay int,
+//     time_delay varchar(50),
+//     created_dt TIMESTAMP,
+//     shift VARCHAR(10)
+//     -- Sesuaikan dengan struktur asli tabel Anda
+// );
+
+// -- Masukkan kembali data dari tabel cadangan
+// INSERT INTO tb_r_regrind_reports (report_id, time_range, from_gel, penambahan, reg_set, tool_delay, time_delay, created_dt, shift)
+// SELECT report_id, time_range, from_gel, penambahan, reg_set, tool_delay, time_delay, created_dt, shift
+// FROM tb_r_regrind_reports_backup;
+
+// -- Hapus tabel sementara jika sudah tidak diperlukan
+// DROP TABLE tb_r_regrind_reports_backup;
+
+// COMMIT;
