@@ -7,39 +7,52 @@ module.exports = {
       const { shift, actMp, jamKerja, total, oee } = req.body;
 
       // Ambil waktu saat ini dalam timezone "Asia/Jakarta"
-      let created_dt = moment().tz("Asia/Jakarta");
+      const created_dt = moment().tz("Asia/Jakarta");
 
-      // Cek apakah shift malam dan jam input adalah antara jam 00:00 sampai sebelum jam 07:00
-      if (shift === "Malam" && created_dt.hour() < 7) {
-        // Mundurkan tanggal menjadi hari sebelumnya karena masih dalam range shift malam sebelumnya
-        created_dt.subtract(1, "days");
+      // Inisialisasi waktu awal dan akhir untuk pengecekan berdasarkan kondisi waktu
+      let checkStart, checkEnd;
+
+      // Jika current time antara 7:00 hingga 23:59:59
+      if (created_dt.hour() >= 7) {
+        checkStart = created_dt.clone().set({ hour: 7, minute: 0, second: 0 });
+        checkEnd = created_dt
+          .clone()
+          .add(1, "days")
+          .set({ hour: 0, minute: 0, second: 0 });
+      } else {
+        // Jika current time antara 00:00 hingga sebelum 7:00
+        checkStart = created_dt
+          .clone()
+          .subtract(1, "days")
+          .set({ hour: 7, minute: 0, second: 0 });
+        checkEnd = created_dt.clone().set({ hour: 7, minute: 0, second: 0 });
       }
 
-      // Format created_dt untuk keperluan penyimpanan
-      created_dt = created_dt.format("YYYY-MM-DD HH:mm:ss");
+      // Format tanggal untuk keperluan penyimpanan dan pengecekan
+      const formattedCreatedDt = created_dt.format("YYYY-MM-DD HH:mm:ss");
 
       const client = await database.connect();
 
-      // Cek apakah data untuk shift tertentu sudah ada pada tanggal hari ini (atau tanggal yang sudah disesuaikan)
+      // Cek apakah data untuk shift tertentu sudah ada dalam rentang waktu yang ditentukan
       const checkQuery = `
         SELECT * FROM tb_r_oee 
-        WHERE shift = $1 AND created_dt::date = $2
+        WHERE shift = $1 AND created_dt >= $2 AND created_dt < $3
       `;
 
-      // Lakukan pengecekan berdasarkan shift dan tanggal created_dt
       const checkResult = await client.query(checkQuery, [
         shift,
-        created_dt.split(" ")[0],
+        checkStart.format("YYYY-MM-DD HH:mm:ss"), // gunakan waktu mulai
+        checkEnd.format("YYYY-MM-DD HH:mm:ss"), // gunakan waktu akhir
       ]);
 
       let userData;
 
       if (checkResult.rows.length > 0) {
-        // Jika data sudah ada, lakukan update
+        // Jika data sudah ada, lakukan update kecuali `created_dt`
         const updateQuery = `
           UPDATE tb_r_oee 
           SET act_mp = $2, jam_kerja = $3, total_reg_set = $4, oee_rslt = $5 
-          WHERE shift = $1 AND created_dt::date = $6
+          WHERE shift = $1 AND created_dt >= $6 AND created_dt < $7
           RETURNING *
         `;
         userData = await client.query(updateQuery, [
@@ -48,13 +61,14 @@ module.exports = {
           jamKerja,
           total,
           oee,
-          created_dt.split(" ")[0], // Hanya gunakan bagian tanggal dari created_dt untuk pengecekan
+          checkStart.format("YYYY-MM-DD HH:mm:ss"), // waktu mulai untuk update
+          checkEnd.format("YYYY-MM-DD HH:mm:ss"), // waktu akhir untuk update
         ]);
       } else {
-        // Jika data belum ada, lakukan insert
+        // Jika data belum ada, lakukan insert termasuk `created_dt`
         const insertQuery = `
           INSERT INTO tb_r_oee (shift, act_mp, jam_kerja, total_reg_set, oee_rslt, created_dt) 
-          VALUES ($1, $2, $3, $4, $5 , $6) 
+          VALUES ($1, $2, $3, $4, $5, $6) 
           RETURNING *
         `;
         userData = await client.query(insertQuery, [
@@ -63,7 +77,7 @@ module.exports = {
           jamKerja,
           total,
           oee,
-          created_dt,
+          formattedCreatedDt, // simpan formatted date
         ]);
       }
 

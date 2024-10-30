@@ -36,14 +36,34 @@ module.exports = {
         time_delay,
       } = req.body;
 
-      // Menggunakan moment untuk timestamp dengan zona waktu "Asia/Jakarta"
-      const created_dt = moment()
-        .tz("Asia/Jakarta")
-        .format("YYYY-MM-DD HH:mm:ss");
+      // Menggunakan moment untuk mendapatkan waktu saat ini di zona waktu "Asia/Jakarta"
+      const now = moment().tz("Asia/Jakarta");
+      // const now = moment("2024-10-30 20:00:00").tz("Asia/Jakarta");
+      const currentHour = now.hour();
+
+      // Menghitung created_dt untuk input data
+      const created_dt = now.format("YYYY-MM-DD HH:mm:ss");
+      console.log("created_dt:", created_dt);
+
+      // Menentukan rentang waktu untuk pencarian data
+
+      let startDate, endDate;
+      if (currentHour >= 7) {
+        // Jam 07:00 - 23:59: menggunakan hari ini dari jam 07:00 sampai akhir hari
+        startDate = now.format("YYYY-MM-DD 07:00:00");
+        endDate = now.format("YYYY-MM-DD 23:59:59");
+      } else {
+        // Jam 00:00 - 06:59: menggunakan hari kemarin dari jam 07:00 sampai hari ini jam 07:00
+        startDate = now.subtract(1, "day").format("YYYY-MM-DD 07:00:00");
+        endDate = now.add(1, "day").format("YYYY-MM-DD 07:00:00"); // Mengatur endDate menjadi 07:00 dari hari ini
+      }
+
+      console.log("startDate:", startDate);
+      console.log("endDate:", endDate);
 
       // Fungsi untuk mendapatkan ID terakhir dan menambah 1
       const getNextId = async (client) => {
-        const query = `SELECT MAX(report_id) AS maxId FROM tb_r_regrind_reports`;
+        const query = `SELECT MAX(report_id) AS maxId FROM tb_r_regrind_reports;`;
         const result = await client.query(query);
         const maxId = result.rows[0].maxid || 0; // Jika tabel kosong, mulai dari 0
         return maxId + 1; // Tambah 1 untuk ID berikutnya
@@ -54,33 +74,61 @@ module.exports = {
       // Mendapatkan ID berikutnya untuk report_id
       const nextReportId = await getNextId(client);
 
-      // Query untuk upsert berdasarkan kombinasi time_range dan tanggal
-      const q = `
-        INSERT INTO tb_r_regrind_reports (report_id,  time_range, from_gel, penambahan, reg_set, tool_delay, time_delay, created_dt, shift)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (time_range, DATE(created_dt)) DO UPDATE
-        SET
-          from_gel = EXCLUDED.from_gel,
-          penambahan = EXCLUDED.penambahan,
-          reg_set = EXCLUDED.reg_set,
-          tool_delay = EXCLUDED.tool_delay,
-          time_delay = EXCLUDED.time_delay
-        RETURNING *;
-      `;
+      // Query untuk pengecekan data yang sudah ada
+      const checkQuery = `SELECT *
+        FROM tb_r_regrind_reports
+        WHERE time_range = $1
+          AND shift = $2
+          AND created_dt BETWEEN $3 AND $4
+        LIMIT 1;`;
+      const checkValues = [time_range, shift, startDate, endDate];
+      const existingDataQuery = await client.query(checkQuery, checkValues);
 
-      const values = [
-        nextReportId, // ID yang baru di-generate
-        time_range,
-        from_gel,
-        penambahan,
-        reg_set,
-        tool_delay,
-        time_delay,
-        created_dt,
-        shift,
-      ];
+      console.log("existingDataQuery:", existingDataQuery.rows);
 
-      const userDataQuery = await client.query(q, values);
+      let query;
+      let values;
+
+      if (existingDataQuery.rows.length > 0) {
+        // Jika data ditemukan, lakukan update (kecuali created_dt)
+        query = `UPDATE tb_r_regrind_reports
+          SET
+            from_gel = $1,
+            penambahan = $2,
+            reg_set = $3,
+            tool_delay = $4,
+            time_delay = $5
+          WHERE report_id = $6
+          RETURNING *;`;
+
+        values = [
+          from_gel,
+          penambahan,
+          reg_set,
+          tool_delay,
+          time_delay,
+          existingDataQuery.rows[0].report_id,
+        ];
+      } else {
+        // Jika data tidak ditemukan, lakukan insert
+        query = `INSERT INTO tb_r_regrind_reports (report_id, time_range, from_gel, penambahan, reg_set, tool_delay, time_delay, created_dt, shift)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          RETURNING *;`;
+
+        values = [
+          nextReportId,
+          time_range,
+          from_gel,
+          penambahan,
+          reg_set,
+          tool_delay,
+          time_delay,
+          created_dt,
+          shift,
+        ];
+      }
+
+      const userDataQuery = await client.query(query, values);
       const userData = userDataQuery.rows;
       client.release();
 
