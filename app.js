@@ -1,29 +1,16 @@
+// app.js
 require("dotenv").config();
-var express = require("express");
-var cors = require("cors");
-var multer = require("multer");
-var path = require("path");
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
-var app = express();
-var indexRouter = require("./routes/index");
-// const sqlinjection = require("sql-injection");
-const { rateLimit } = require("express-rate-limit");
-const limiter = rateLimit({
-  windowMs: 3 * 1000, // 15 minutes
-  limit: 20, // Limit each IP to 100 requests per window (here, per 15 minutes).
-  standardHeaders: "draft-7", // draft-6: RateLimit-* headers; draft-7: combined RateLimit header
-  legacyHeaders: false, // Disable the X-RateLimit-* headers.
-  validate: {
-    xForwardedForHeader: false,
-    default: true,
-  },
-});
+const express = require("express");
+const cors = require("cors");
+const multer = require("multer");
+const path = require("path");
+const cookieParser = require("cookie-parser");
+const logger = require("morgan");
 
-// Deklarasi path untuk penyimpanan file
+const app = express();
 const uploadPath = path.join(__dirname, "uploads");
 
-// Konfigurasi multer untuk menangani unggahan file
+// Konfigurasi multer untuk penyimpanan file
 const storage = multer.diskStorage({
   destination: uploadPath,
   filename: function (req, file, cb) {
@@ -34,21 +21,64 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
+// Middleware untuk menentukan penggunaan `single` atau `array`
+// const uploadDynamic = (req, res, next) => {
+//   // Gunakan `upload.fields` dengan definisi untuk single dan multiple
+//   upload.fields([{ name: "foto", maxCount: 10 }])(req, res, (err) => {
+//     if (err) {
+//       return next(err); // Jika ada error saat upload
+//     }
+
+//     // Jika hanya satu file, simpan di `req.file` agar konsisten dengan `upload.single`
+//     if (req.files && req.files.foto && req.files.foto.length === 1) {
+//       req.file = req.files.foto[0];
+//       delete req.files; // Hapus `req.files` untuk konsistensi
+//     }
+
+//     next(); // Lanjut ke middleware berikutnya
+//   });
+// };
+const uploadDynamic = (req, res, next) => {
+  // Use `upload.fields` to define the fields for single and multiple file uploads
+  upload.fields([{ name: "foto", maxCount: 10 }])(req, res, (err) => {
+    if (err) {
+      return next(err); // Handle any upload errors
+    }
+
+    // Check if files were uploaded
+    if (req.files && req.files.foto) {
+      // If there is one file, convert it to an array for consistency
+      if (!Array.isArray(req.files.foto)) {
+        req.files.foto = [req.files.foto]; // Wrap the single file in an array
+      }
+
+      // Log the number of files uploaded
+      console.log(`Number of files uploaded: ${req.files.foto.length}`);
+
+      // Assign the single file to req.file if only one is uploaded
+      if (req.files.foto.length === 1) {
+        req.file = req.files.foto[0];
+      }
+    }
+
+    next(); // Proceed to the next middleware
+  });
+};
+
+// Middleware lainnya
 app.use(cors());
-app.use(upload.single("foto")); // 'foto sesuai dengan nama field pada form
-app.use(limiter);
+app.use(uploadDynamic); // Pasang uploadDynamic untuk seluruh aplikasi
 app.use(logger("dev"));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Mengatur akses statis ke folder 'uploads'
+
+// Set akses statis ke folder 'uploads'
 app.use("/uploads", express.static(uploadPath));
 
-app.use(express.static(path.join(__dirname, "public")));
-// app.use(sqlinjection);
-app.use("/", require("./routes"));
-app.use("/", indexRouter);
+// Route yang ada di aplikasi
+app.use("/", require("./routes/index"));
 
 module.exports = app;
