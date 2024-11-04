@@ -159,10 +159,3 @@ module.exports = {
     }
   },
 };
-
-// CREATE TABLE public.tb_m_time_reports (
-// 	time_id int4 NOT NULL,
-// 	shift varchar(10) NULL,
-// 	time_range varchar(255) NULL,
-// 	created_dt timestamp DEFAULT CURRENT_TIMESTAMP NULL
-// );
