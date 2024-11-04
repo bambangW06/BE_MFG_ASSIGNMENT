@@ -197,41 +197,57 @@ module.exports = {
     try {
       const modalType = req.query.modalType;
       const problem_id = req.query.problem_id;
-      // console.log("modalType", modalType);
-      // console.log("problem_id", problem_id);
-      if (modalType === "category") {
-        const q = `DELETE FROM tb_r_in_process WHERE problem_id = $1`;
+      const client = await database.connect();
 
-        const values = [problem_id];
-        const client = await database.connect();
-        const userDataQuery = await client.query(q, values);
+      await client.query("BEGIN"); // Memulai transaksi
+
+      if (modalType === "category") {
+        // Hapus data terkait di `tb_r_analisa` terlebih dahulu
+        await client.query(`DELETE FROM tb_r_analisa WHERE problem_id = $1`, [
+          problem_id,
+        ]);
+
+        // Kemudian hapus data di `tb_r_in_process`
+        const q = `DELETE FROM tb_r_in_process WHERE problem_id = $1`;
+        const userDataQuery = await client.query(q, [problem_id]);
         const userData = userDataQuery.rows;
-        client.release();
+
+        await client.query("COMMIT"); // Commit transaksi
+
         res.status(200).json({
           message: "Success to Delete Data",
           data: userData,
         });
       } else if (modalType === "next proses") {
-        const q = `DELETE FROM tb_r_next_process WHERE problem_id = $1`;
+        // Hapus data terkait di `tb_r_analisa` terlebih dahulu
+        await client.query(`DELETE FROM tb_r_analisa WHERE problem_id = $1`, [
+          problem_id,
+        ]);
 
-        const values = [problem_id];
-        const client = await database.connect();
-        const userDataQuery = await client.query(q, values);
+        // Kemudian hapus data di `tb_r_next_process`
+        const q = `DELETE FROM tb_r_next_process WHERE problem_id = $1`;
+        const userDataQuery = await client.query(q, [problem_id]);
         const userData = userDataQuery.rows;
-        client.release();
+
+        await client.query("COMMIT"); // Commit transaksi
+
         res.status(200).json({
           message: "Success to Delete Data",
           data: userData,
         });
       }
+
+      client.release();
     } catch (error) {
       console.error("Error fetching data:", error);
+      await client.query("ROLLBACK"); // Rollback transaksi jika terjadi error
       res.status(500).json({
-        message: "Failed to Get Data",
+        message: "Failed to Delete Data",
         error: error.message,
       });
     }
   },
+
   problemTable: async (req, res) => {
     try {
       const selectedDate = req.query.selectedDate;
