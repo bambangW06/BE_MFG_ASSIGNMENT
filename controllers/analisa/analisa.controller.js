@@ -160,21 +160,9 @@ module.exports = {
   },
 };
 
-// CREATE TABLE tb_r_analisa (
-//   analisa_id int primary key not null,
-//   shift varchar(10),
-//   problem_id INT,
-//   CONSTRAINT fk_problem_id FOREIGN KEY (problem_id)
-//    REFERENCES tb_r_next_process(problem_id),
-//   problem_nm VARCHAR(255) NOT NULL,
-//   machine_id int,
-//   constraint fk_machine_id foreign key (machine_id)
-//   references tb_m_machines(machine_id),
-//   tool_id INT,
-//   CONSTRAINT fk_tool_id FOREIGN KEY (tool_id)
-//   REFERENCES tb_m_master_tools(tool_id),
-//   tool_nm VARCHAR(255) NOT NULL,
-//   created_dt date,
-//   analisa TEXT NOT NULL,
-//   foto JSONB
+// CREATE TABLE public.tb_m_time_reports (
+// 	time_id int4 NOT NULL,
+// 	shift varchar(10) NULL,
+// 	time_range varchar(255) NULL,
+// 	created_dt timestamp DEFAULT CURRENT_TIMESTAMP NULL
 // );

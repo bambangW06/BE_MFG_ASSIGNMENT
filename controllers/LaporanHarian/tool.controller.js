@@ -147,7 +147,7 @@ module.exports = {
 
   getReportReg: async (req, res) => {
     try {
-      const selectedDate = req.query.selectedDate;
+      const { selectedDate, shift } = req.query;
       // console.log("selectedDate:", selectedDate);
 
       // Dapatkan waktu sekarang
@@ -189,12 +189,12 @@ module.exports = {
       );
 
       const q =
-        "SELECT * FROM tb_r_regrind_reports WHERE created_dt AT TIME ZONE 'Asia/Jakarta' >= $1 AND created_dt AT TIME ZONE 'Asia/Jakarta' < $2";
+        "SELECT * FROM tb_r_regrind_reports WHERE created_dt AT TIME ZONE 'Asia/Jakarta' >= $1 AND created_dt AT TIME ZONE 'Asia/Jakarta' < $2 AND shift = $3;";
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [mulai, selesai]);
+      const userDataQuery = await client.query(q, [mulai, selesai, shift]);
       const userData = userDataQuery.rows;
       client.release();
-      // console.log(userData);
+      console.log(userData);
 
       res.status(200).json({
         message: "Success to Get Data",
