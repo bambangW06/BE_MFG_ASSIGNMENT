@@ -130,6 +130,7 @@ module.exports = {
           ON tb_r_analisa.machine_id = tb_m_machines.machine_id
         WHERE tb_r_analisa.shift = $1 
           AND tb_r_analisa.created_dt::date = $2
+        ORDER BY tb_r_analisa.updated_dt DESC
       `;
 
       const values = [shift, searchDate]; // Ambil hanya bagian tanggal
@@ -155,6 +156,123 @@ module.exports = {
       res.status(500).json({
         message: "Failed to Get Data",
         error: error.message, // Mengirim pesan kesalahan ke frontend
+      });
+    }
+  },
+  editAnalisaProblem: async (req, res) => {
+    try {
+      const problem_id = req.params.id;
+      console.log("problem_id", problem_id);
+
+      const { problem_nm, analisa } = req.body;
+      console.log("problem_nm", problem_nm, "analisa", analisa);
+      const updated_dt = moment()
+        .tz("Asia/Jakarta")
+        .format("YYYY-MM-DD HH:mm:ss");
+
+      // Log uploaded files
+      let fileUrls = [];
+      if (req.files && Array.isArray(req.files.foto)) {
+        fileUrls = req.files.foto.map((file) => `/uploads/${file.filename}`);
+      } else if (req.files && req.files.foto) {
+        fileUrls = [`/uploads/${req.files.foto.filename}`];
+      }
+      console.log("fileUrls", fileUrls);
+
+      const client = await database.connect();
+
+      // Ambil data lama dari database
+      const currentDataQuery = `
+        SELECT problem_nm, analisa, foto FROM tb_r_analisa WHERE problem_id = $1
+      `;
+      const currentDataResult = await client.query(currentDataQuery, [
+        problem_id,
+      ]);
+      const currentData = currentDataResult.rows[0];
+
+      // Cek perubahan nilai
+      const updates = [];
+      const values = [];
+      let valueIndex = 1;
+
+      if (problem_nm && problem_nm !== currentData.problem_nm) {
+        updates.push(`problem_nm = $${valueIndex++}`);
+        values.push(problem_nm);
+      }
+
+      if (analisa && analisa !== currentData.analisa) {
+        updates.push(`analisa = $${valueIndex++}`);
+        values.push(analisa);
+      }
+
+      if (fileUrls.length > 0) {
+        const newFoto = JSON.stringify(fileUrls);
+        if (newFoto !== currentData.foto) {
+          updates.push(`foto = $${valueIndex++}`);
+          values.push(newFoto);
+        }
+      }
+
+      // Jika ada perubahan, tambahkan updated_dt
+      if (updates.length > 0) {
+        updates.push(`updated_dt = $${valueIndex++}`); // Menambahkan updated_dt
+        values.push(updated_dt); // Menambahkan nilai updated_dt ke values
+      }
+
+      // Jika tidak ada perubahan, kirim respons tanpa melakukan update
+      if (updates.length === 0) {
+        client.release();
+        return res.status(200).json({
+          message: "No changes detected, data remains the same.",
+          data: currentData,
+        });
+      }
+
+      // Buat query update jika ada perubahan
+      const updateQuery = `
+        UPDATE tb_r_analisa
+        SET ${updates.join(", ")}
+        WHERE problem_id = $${valueIndex}
+        RETURNING *
+      `;
+      values.push(problem_id);
+
+      const result = await client.query(updateQuery, values);
+      client.release();
+
+      res.status(200).json({
+        message: "Success to Update Data",
+        data: result.rows[0],
+      });
+    } catch (error) {
+      console.error("Error:", error.message);
+      res.status(500).json({
+        message: "Failed to Update Data",
+        error: error.message,
+      });
+    }
+  },
+
+  deleteAnalisaProblem: async (req, res) => {
+    try {
+      const problem_id = req.params.id;
+
+      const client = await database.connect();
+      const result = await client.query(
+        "DELETE FROM tb_r_analisa WHERE problem_id = $1",
+        [problem_id]
+      );
+      client.release();
+
+      res.status(200).json({
+        message: "Success to Delete Data",
+        data: result.rows,
+      });
+    } catch (error) {
+      console.error("Error:", error.message);
+      res.status(500).json({
+        message: "Failed to Delete Data",
+        error: error.message,
       });
     }
   },
