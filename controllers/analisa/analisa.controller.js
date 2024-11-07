@@ -14,6 +14,9 @@ module.exports = {
         tool_nm,
         created_dt,
         analisa,
+        category_id,
+        category_nm,
+        waktu,
       } = req.body;
 
       // Log the uploaded files to see how many and what files are received
@@ -35,36 +38,66 @@ module.exports = {
 
       console.log("File URLs:", fileUrls);
 
-      // Fungsi untuk mendapatkan ID terakhir dan menambah 1
       const getNextId = async () => {
-        const query = `SELECT MAX(analisa_id) AS maxId FROM tb_r_analisa;`;
+        let query;
+
+        // Cek apakah problem_id dan category_id ada
+        if (problem_id && category_id) {
+          // Jika ada, pilih dari tb_r_analisa_inprocess
+          query = `SELECT MAX(analisa_id) AS maxId FROM tb_r_analisa_inprocess;`;
+        } else {
+          // Jika tidak ada, pilih dari tb_r_analisa
+          query = `SELECT MAX(analisa_id) AS maxId FROM tb_r_analisa;`;
+        }
+
         const result = await client.query(query);
         const maxId = result.rows[0].maxid || 0; // Jika tabel kosong, mulai dari 0
         return maxId + 1; // Tambah 1 untuk ID berikutnya
       };
-
       // Mendapatkan ID berikutnya untuk analisa_id
       const nextAnalisaId = await getNextId();
 
-      // Buat query untuk menyimpan data ke dalam database
-      const query = `
-                INSERT INTO public.tb_r_analisa (analisa_id, shift, problem_id, problem_nm, machine_id, tool_id, tool_nm, created_dt, analisa, foto)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                RETURNING *;
-              `;
-
-      const values = [
-        nextAnalisaId, // ID analisa baru
-        shift,
-        problem_id,
-        problem_nm,
-        machine_id,
-        tool_id,
-        tool_nm,
-        created_dt, // Pastikan untuk mengonversi ke format timestamp
-        analisa,
-        fileUrls.length > 0 ? JSON.stringify(fileUrls) : null, // Simpan sebagai JSON jika ada
-      ];
+      // Tentukan tabel dan kolom sesuai kondisi
+      let query, values;
+      if (category_id && category_nm && waktu) {
+        // Jika "Problem In Proses"
+        query = `
+          INSERT INTO public.tb_r_analisa_inprocess (analisa_id, shift, problem_id, problem_nm, category_id, category_nm, waktu, created_dt, analisa, foto)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          RETURNING *;
+        `;
+        values = [
+          nextAnalisaId,
+          shift,
+          problem_id,
+          problem_nm,
+          category_id,
+          category_nm,
+          waktu,
+          created_dt,
+          analisa,
+          fileUrls.length > 0 ? JSON.stringify(fileUrls) : null,
+        ];
+      } else {
+        // Jika "Problem Next Proses"
+        query = `
+          INSERT INTO public.tb_r_analisa (analisa_id, shift, problem_id, problem_nm, machine_id, tool_id, tool_nm, created_dt, analisa, foto)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          RETURNING *;
+        `;
+        values = [
+          nextAnalisaId,
+          shift,
+          problem_id,
+          problem_nm,
+          machine_id,
+          tool_id,
+          tool_nm,
+          created_dt,
+          analisa,
+          fileUrls.length > 0 ? JSON.stringify(fileUrls) : null,
+        ];
+      }
 
       // Eksekusi query untuk menyimpan data
       const result = await client.query(query, values);
@@ -114,24 +147,62 @@ module.exports = {
       console.log("searchDate:", searchDate); // Log tanggal pencarian
 
       const query = `
-        SELECT 
-          tb_r_analisa.*, 
-          tb_r_next_process.act_counter,
-          tb_m_master_tools.std_counter, 
-          tb_m_master_tools.process_nm,
-          tb_m_master_tools.line_nm,
-          tb_m_machines.machine_nm
-        FROM tb_r_analisa
-        LEFT JOIN tb_r_next_process 
-          ON tb_r_analisa.problem_id = tb_r_next_process.problem_id
-        LEFT JOIN tb_m_master_tools 
-          ON tb_r_analisa.tool_id = tb_m_master_tools.tool_id
-        LEFT JOIN tb_m_machines 
-          ON tb_r_analisa.machine_id = tb_m_machines.machine_id
-        WHERE tb_r_analisa.shift = $1 
-          AND tb_r_analisa.created_dt::date = $2
-        ORDER BY tb_r_analisa.updated_dt DESC
-      `;
+      SELECT 
+        tb_r_analisa.analisa_id,
+        tb_r_analisa.shift,
+        tb_r_analisa.problem_id,
+        tb_r_analisa.problem_nm,
+        tb_r_analisa.machine_id,
+        tb_r_analisa.tool_id,
+        tb_r_analisa.tool_nm,
+        tb_r_analisa.created_dt,
+        tb_r_analisa.analisa,
+        tb_r_analisa.foto,
+        tb_r_next_process.act_counter,
+        tb_m_master_tools.std_counter, 
+        tb_m_master_tools.process_nm,
+        tb_m_master_tools.line_nm,
+        tb_m_machines.machine_nm,
+        NULL::integer AS category_id,  
+        NULL::varchar AS category_nm, 
+        NULL::integer AS waktu       
+      FROM tb_r_analisa
+      LEFT JOIN tb_r_next_process 
+        ON tb_r_analisa.problem_id = tb_r_next_process.problem_id
+      LEFT JOIN tb_m_master_tools 
+        ON tb_r_analisa.tool_id = tb_m_master_tools.tool_id
+      LEFT JOIN tb_m_machines 
+        ON tb_r_analisa.machine_id = tb_m_machines.machine_id
+      WHERE tb_r_analisa.shift = $1 
+        AND tb_r_analisa.created_dt::date = $2
+    
+      UNION ALL
+    
+      SELECT 
+        tb_r_analisa_inprocess.analisa_id,
+        tb_r_analisa_inprocess.shift,
+        tb_r_analisa_inprocess.problem_id,
+        tb_r_analisa_inprocess.problem_nm,
+        NULL::integer AS machine_id,
+        NULL::integer AS tool_id,
+        NULL::varchar AS tool_nm,
+        tb_r_analisa_inprocess.created_dt,
+        tb_r_analisa_inprocess.analisa,
+        tb_r_analisa_inprocess.foto,
+        NULL::integer AS act_counter,
+        NULL::integer AS std_counter, 
+        NULL::varchar AS process_nm,
+        NULL::varchar AS line_nm,
+        NULL::varchar AS machine_nm,
+        tb_r_analisa_inprocess.category_id, 
+        tb_r_analisa_inprocess.category_nm,  
+        tb_r_analisa_inprocess.waktu       
+      FROM tb_r_analisa_inprocess
+      WHERE tb_r_analisa_inprocess.shift = $1 
+        AND tb_r_analisa_inprocess.created_dt::date = $2
+    
+      ORDER BY created_dt DESC;
+    `;
 
       const values = [shift, searchDate]; // Ambil hanya bagian tanggal
       console.log("Query Values:", values); // Log parameter query
@@ -162,10 +233,7 @@ module.exports = {
   editAnalisaProblem: async (req, res) => {
     try {
       const problem_id = req.params.id;
-      console.log("problem_id", problem_id);
-
-      const { problem_nm, analisa } = req.body;
-      console.log("problem_nm", problem_nm, "analisa", analisa);
+      const { problem_nm, analisa, category_id } = req.body; // Tambahkan category_id
       const updated_dt = moment()
         .tz("Asia/Jakarta")
         .format("YYYY-MM-DD HH:mm:ss");
@@ -177,17 +245,22 @@ module.exports = {
       } else if (req.files && req.files.foto) {
         fileUrls = [`/uploads/${req.files.foto.filename}`];
       }
-      console.log("fileUrls", fileUrls);
 
       const client = await database.connect();
 
       // Ambil data lama dari database
       const currentDataQuery = `
-        SELECT problem_nm, analisa, foto FROM tb_r_analisa WHERE problem_id = $1
+        SELECT problem_nm, analisa, foto FROM ${
+          category_id ? "tb_r_analisa_inprocess" : "tb_r_analisa"
+        } WHERE problem_id = $1 ${category_id ? "AND category_id = $2" : ""}
       `;
-      const currentDataResult = await client.query(currentDataQuery, [
-        problem_id,
-      ]);
+      const currentDataValues = category_id
+        ? [problem_id, category_id]
+        : [problem_id];
+      const currentDataResult = await client.query(
+        currentDataQuery,
+        currentDataValues
+      );
       const currentData = currentDataResult.rows[0];
 
       // Cek perubahan nilai
@@ -215,8 +288,8 @@ module.exports = {
 
       // Jika ada perubahan, tambahkan updated_dt
       if (updates.length > 0) {
-        updates.push(`updated_dt = $${valueIndex++}`); // Menambahkan updated_dt
-        values.push(updated_dt); // Menambahkan nilai updated_dt ke values
+        updates.push(`updated_dt = $${valueIndex++}`);
+        values.push(updated_dt);
       }
 
       // Jika tidak ada perubahan, kirim respons tanpa melakukan update
@@ -230,12 +303,15 @@ module.exports = {
 
       // Buat query update jika ada perubahan
       const updateQuery = `
-        UPDATE tb_r_analisa
+        UPDATE ${category_id ? "tb_r_analisa_inprocess" : "tb_r_analisa"}
         SET ${updates.join(", ")}
-        WHERE problem_id = $${valueIndex}
+        WHERE problem_id = $${valueIndex} ${
+        category_id ? `AND category_id = $${valueIndex + 1}` : ""
+      }
         RETURNING *
       `;
       values.push(problem_id);
+      if (category_id) values.push(category_id);
 
       const result = await client.query(updateQuery, values);
       client.release();
@@ -256,12 +332,29 @@ module.exports = {
   deleteAnalisaProblem: async (req, res) => {
     try {
       const problem_id = req.params.id;
+      const category_id = req.query.category_id; // Ambil category_id dari query parameter
 
       const client = await database.connect();
-      const result = await client.query(
-        "DELETE FROM tb_r_analisa WHERE problem_id = $1",
-        [problem_id]
-      );
+
+      let deleteQuery;
+      let deleteValues;
+
+      // Jika category_id ada, hapus dari tb_r_analisa_in_process, jika tidak ada hapus dari tb_r_analisa
+      if (category_id) {
+        deleteQuery = `
+          DELETE FROM tb_r_analisa_inprocess
+          WHERE problem_id = $1 AND category_id = $2
+        `;
+        deleteValues = [problem_id, category_id];
+      } else {
+        deleteQuery = `
+          DELETE FROM tb_r_analisa
+          WHERE problem_id = $1
+        `;
+        deleteValues = [problem_id];
+      }
+
+      const result = await client.query(deleteQuery, deleteValues);
       client.release();
 
       res.status(200).json({
@@ -277,3 +370,24 @@ module.exports = {
     }
   },
 };
+
+// CREATE TABLE tb_r_analisa_inprocess (
+//   analisa_id int primary key not null,
+//   shift varchar(10),
+//   problem_id INT,
+//   CONSTRAINT fk_problem_id FOREIGN KEY (problem_id)
+//    REFERENCES tb_r_in_process(problem_id),
+//   problem_nm VARCHAR(255) NOT NULL,
+//  category_id int,
+//   constraint fk_category_id foreign key (category_id)
+//   references tb_m_category(category_id),
+//   category_nm varchar(255),
+//   waktu int,
+//    created_dt date,
+//   analisa TEXT NOT NULL,
+//   foto JSONB,
+//   updated_dt timestamp
+// );
+
+// alter table tb_r_analisa
+// add column updated_dt timestamp;

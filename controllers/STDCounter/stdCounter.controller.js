@@ -27,8 +27,7 @@ module.exports = {
     try {
       const shift = req.params.shift;
       console.log("shift", shift);
-
-      const q = `SELECT * FROM tb_m_time_reports WHERE shift = $1`;
+      const q = `SELECT * FROM tb_m_time_reports WHERE shift = $1 ORDER BY time_id ASC`;
       const values = [shift];
       const client = await database.connect();
       const userDataQuery = await client.query(q, values);
