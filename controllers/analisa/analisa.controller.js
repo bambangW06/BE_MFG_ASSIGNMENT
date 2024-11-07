@@ -370,24 +370,3 @@ module.exports = {
     }
   },
 };
-
-// CREATE TABLE tb_r_analisa_inprocess (
-//   analisa_id int primary key not null,
-//   shift varchar(10),
-//   problem_id INT,
-//   CONSTRAINT fk_problem_id FOREIGN KEY (problem_id)
-//    REFERENCES tb_r_in_process(problem_id),
-//   problem_nm VARCHAR(255) NOT NULL,
-//  category_id int,
-//   constraint fk_category_id foreign key (category_id)
-//   references tb_m_category(category_id),
-//   category_nm varchar(255),
-//   waktu int,
-//    created_dt date,
-//   analisa TEXT NOT NULL,
-//   foto JSONB,
-//   updated_dt timestamp
-// );
-
-// alter table tb_r_analisa
-// add column updated_dt timestamp;
