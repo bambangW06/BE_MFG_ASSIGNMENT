@@ -6,33 +6,80 @@ module.exports = {
       const created_dt = moment()
         .tz("Asia/Jakarta")
         .format("YYYY-MM-DD HH:mm:ss");
-      // console.log("created_dt", created_dt);
 
-      const { category_id, time_range, problem_nm, waktu } = req.body;
-      const q = `INSERT INTO tb_r_in_process (category_id, time_range, problem_nm, waktu, created_dt) VALUES ($1, $2, $3, $4, $5) RETURNING *`;
-      const values = [category_id, time_range, problem_nm, waktu, created_dt];
+      const {
+        category_id,
+        time_range,
+        problem_nm,
+        waktu,
+        mode,
+        problem_id, // Digunakan saat mode 'edit'
+      } = req.body;
+
+      let query, values;
+
+      if (mode === "edit") {
+        // Mode edit: perbarui data berdasarkan problem_id
+        let setClause = [];
+        values = [];
+
+        if (category_id !== undefined) {
+          setClause.push(`category_id = $${values.length + 1}`);
+          values.push(category_id);
+        }
+        if (time_range !== undefined) {
+          setClause.push(`time_range = $${values.length + 1}`);
+          values.push(time_range);
+        }
+        if (problem_nm !== undefined) {
+          setClause.push(`problem_nm = $${values.length + 1}`);
+          values.push(problem_nm);
+        }
+        if (waktu !== undefined) {
+          setClause.push(`waktu = $${values.length + 1}`);
+          values.push(waktu);
+        }
+
+        // Tambahkan `problem_id` untuk kondisi WHERE
+        values.push(problem_id);
+
+        // Buat query UPDATE dengan bagian SET dinamis
+        query = `UPDATE tb_r_in_process SET ${setClause.join(
+          ", "
+        )} WHERE problem_id = $${values.length} RETURNING *`;
+      } else {
+        // Mode add: tambahkan data baru
+        query = `INSERT INTO tb_r_in_process (category_id, time_range, problem_nm, waktu, created_dt) 
+                 VALUES ($1, $2, $3, $4, $5) RETURNING *`;
+        values = [category_id, time_range, problem_nm, waktu, created_dt];
+      }
+
       const client = await database.connect();
-      const userDataQuery = await client.query(q, values);
-      const userData = userDataQuery.rows;
+      const result = await client.query(query, values);
+      const userData = result.rows;
       client.release();
+
+      const message =
+        mode === "edit" ? "Success to Update Data" : "Success to Add Data";
+
       res.status(201).json({
-        message: "Success to Add Data",
+        message: message,
         data: userData,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to Add Data",
-        error: error,
+        message: "Failed to Add/Update Data",
+        error: error.message,
       });
     }
   },
+
   addNextProcess: async (req, res) => {
     try {
       const created_dt = moment()
         .tz("Asia/Jakarta")
         .format("YYYY-MM-DD HH:mm:ss");
 
-      console.log("created_dt", created_dt);
       const {
         line_id,
         machine_id,
@@ -40,32 +87,85 @@ module.exports = {
         time_range,
         problem_nm,
         act_counter,
+        mode,
+        problem_id,
       } = req.body;
-      const q = `INSERT INTO tb_r_next_process (line_id, machine_id, tool_id, time_range, problem_nm, act_counter, created_dt) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
-      const values = [
-        line_id,
-        machine_id,
-        tool_id,
-        time_range,
-        problem_nm,
-        act_counter,
-        created_dt,
-      ];
+
+      let query, values;
+
+      if (mode === "edit") {
+        // Inisialisasi array untuk bagian `SET` dan `values`
+        let setClause = [];
+        values = [];
+
+        // Cek setiap field apakah memiliki nilai; jika iya, tambahkan ke query
+        if (line_id !== undefined) {
+          setClause.push(`line_id = $${values.length + 1}`);
+          values.push(line_id);
+        }
+        if (machine_id !== undefined) {
+          setClause.push(`machine_id = $${values.length + 1}`);
+          values.push(machine_id);
+        }
+        if (tool_id !== undefined) {
+          setClause.push(`tool_id = $${values.length + 1}`);
+          values.push(tool_id);
+        }
+        if (time_range !== undefined) {
+          setClause.push(`time_range = $${values.length + 1}`);
+          values.push(time_range);
+        }
+        if (problem_nm !== undefined) {
+          setClause.push(`problem_nm = $${values.length + 1}`);
+          values.push(problem_nm);
+        }
+        if (act_counter !== undefined) {
+          setClause.push(`act_counter = $${values.length + 1}`);
+          values.push(act_counter);
+        }
+
+        // Menambahkan `problem_id` untuk kondisi `WHERE`
+        values.push(problem_id);
+
+        // Membuat query UPDATE dengan bagian `SET` dinamis
+        query = `UPDATE tb_r_next_process SET ${setClause.join(
+          ", "
+        )} WHERE problem_id = $${values.length} RETURNING *`;
+      } else {
+        // Query untuk mode 'add' atau INSERT
+        query = `INSERT INTO tb_r_next_process (line_id, machine_id, tool_id, time_range, problem_nm, act_counter, created_dt) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+        values = [
+          line_id,
+          machine_id,
+          tool_id,
+          time_range,
+          problem_nm,
+          act_counter,
+          created_dt,
+        ];
+      }
+
       const client = await database.connect();
-      const userDataQuery = await client.query(q, values);
-      const userData = userDataQuery.rows;
+      const result = await client.query(query, values);
+      const userData = result.rows;
       client.release();
+
+      const message =
+        mode === "edit" ? "Success to Update Data" : "Success to Add Data";
+
       res.status(201).json({
-        message: "Success to Add Data",
+        message: message,
         data: userData,
       });
     } catch (error) {
       res.status(500).json({
-        message: "Failed to Add Data",
-        error: error,
+        message: "Failed to Add/Update Data",
+        error: error.message,
       });
     }
   },
+
   getProblem: async (req, res) => {
     try {
       const modalType = req.query.modalType;
