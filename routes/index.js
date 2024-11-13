@@ -29,6 +29,8 @@ var stdCounter = require("./StdCounter/stdCounter");
 var problem = require("./problem/problem");
 var OEE = require("./LaporanHarian/oee");
 var analisa = require("./analisa/analisa");
+var history = require("./history/absen");
+var historyProblem = require("./history/historyProblem");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -59,4 +61,5 @@ router.use("/laporan", stdCounter);
 router.use("/problem", problem);
 router.use("/oee", OEE);
 router.use("/analisa", analisa);
+router.use("/history-problem", historyProblem);
 module.exports = router;
