@@ -6,7 +6,7 @@ const {
 
 var router = require("express").Router();
 
-router.get("/get", getPlanMonth);
+router.get("/get/?:year", getPlanMonth);
 router.get("/search", getSearchSchedule);
 router.put("/edit/:id", editSearchScheduleKuras);
 module.exports = router;

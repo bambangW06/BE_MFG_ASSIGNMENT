@@ -31,6 +31,7 @@ var OEE = require("./LaporanHarian/oee");
 var analisa = require("./analisa/analisa");
 var history = require("./history/absen");
 var historyProblem = require("./history/historyProblem");
+var timerange = require("./TimeRange/index");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -62,4 +63,5 @@ router.use("/problem", problem);
 router.use("/oee", OEE);
 router.use("/analisa", analisa);
 router.use("/history-problem", historyProblem);
+router.use("/masterTimerange", timerange)
 module.exports = router;

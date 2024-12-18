@@ -4,23 +4,38 @@ const moment = require("moment-timezone");
 module.exports = {
   getPlanMonth: async (req, res) => {
     try {
-      const months = moment().format("YYYY-MM");
-      // console.log("Months:", months);
-      // let q = `
-      //   SELECT *
-      //   FROM tb_m_master_schedules
-      //   WHERE TO_CHAR(plan_dt, 'YYYY-MM') LIKE $1
-      //   ORDER BY plan_dt DESC;
-      // `;
-      let q = `
-        SELECT *
-        FROM tb_m_master_schedules;
-      `;
-
+      const year = req.params.year; // Mengambil parameter 'year' dari query string
+      console.log('Received year:', year); // Log untuk memverifikasi nilai year
+  
+      let q; // Deklarasikan query SQL
+      // Cek jika year ada
+      if (year && year !== "undefined") {
+        // Jika year ada, ambil data yang sesuai dengan year
+        q = `
+          SELECT *
+          FROM tb_m_master_schedules
+          WHERE TO_CHAR(plan_dt, 'YYYY') = $1
+          ORDER BY plan_dt DESC;
+        `;
+      } else {
+        // Jika year tidak ada, ambil semua data
+        q = `
+          SELECT *
+          FROM tb_m_master_schedules
+          ORDER BY plan_dt DESC;
+        `;
+      }
+  
       const client = await database.connect();
-      const result = await client.query(q);
-
+      const result = await client.query(q, year && year !== "undefined" ? [year] : []); // Jika ada year, kirim year sebagai parameter
+  
       client.release();
+  
+      // Log hasil query untuk debugging
+      console.log('Number of rows:', result.rowCount);
+      console.log('Rows:', result.rows);
+  
+      // Format tanggal jika ada data
       if (result.rows.length > 0) {
         result.rows.forEach((row) => {
           row.plan_dt = moment(row.plan_dt)
@@ -28,7 +43,8 @@ module.exports = {
             .format("DD-MM-YYYY");
         });
       }
-      // console.log(result.rows);
+  
+      // Mengirimkan response
       res.status(200).json({
         message: "Success to Get Plan for Month",
         data: result.rows,
@@ -41,6 +57,8 @@ module.exports = {
       });
     }
   },
+  
+  
   getSearchSchedule: async (req, res) => {
     try {
       let whereCond = ``;
