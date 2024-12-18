@@ -30,5 +30,21 @@ module.exports = {
             });
             
         }
-    }
+    },
+    addTimerange: async (req, res) => {
+        try {
+            console.log('req.body', req.body);
+            res.status(201).json({
+                message: "Success to Add Data",
+                data: req.body
+            })
+            
+        } catch (error) {
+            res.status(500).json({
+                message: "Failed to Add Data",
+                error: error
+            });
+            
+        }
+    },
 }
