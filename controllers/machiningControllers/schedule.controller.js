@@ -62,17 +62,17 @@ module.exports = {
   },
 
   getScheduleKuras: async (req, res) => {
+    const client = await database.connect();
     try {
-      let whereCond = ``;
-      const machine_nm = req.query.machine_nm;
-      const moment = require("moment-timezone");
+      let whereCond = "";
+      const values = [];
 
+      const machine_nm = req.query.machine_nm;
       if (machine_nm) {
-        // Menggunakan LIKE untuk mencocokkan sebagian dari nilai pada beberapa kolom
-        whereCond = `AND t1.machine_nm LIKE '%${machine_nm}%'`;
+        whereCond = `AND t1.machine_nm LIKE $1`;
+        values.push(`%${machine_nm}%`);
       }
 
-      // Query untuk mendapatkan data dengan last_krs terbaru untuk setiap machine_nm
       const q = `
         SELECT t1.*
         FROM
@@ -92,15 +92,10 @@ module.exports = {
         ${whereCond}
       `;
 
-      const client = await database.connect();
-      const scheduleDataQuery = await client.query(q);
+      const scheduleDataQuery = await client.query(q, values);
       const scheduleData = scheduleDataQuery.rows;
-      client.release();
-      console.log("scheduleData", scheduleData);
 
-      // Memastikan data tanggal ditangani dengan benar
       if (scheduleData.length > 0) {
-        // Konversi tanggal ke zona waktu 'Asia/Jakarta' menggunakan moment-timezone
         scheduleData.forEach((row) => {
           row.last_krs = moment(row.last_krs)
             .tz("Asia/Jakarta")
@@ -113,13 +108,16 @@ module.exports = {
         data: scheduleData,
       });
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.status(500).json({
         message: "Failed to Get Schedule",
-        error: error,
+        error: error.message,
       });
+    } finally {
+      client.release();
     }
   },
+
   editScheduleKuras: async (req, res) => {
     try {
       const id = req.params.id;

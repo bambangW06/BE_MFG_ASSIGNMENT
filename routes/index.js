@@ -32,6 +32,8 @@ var analisa = require("./analisa/analisa");
 var history = require("./history/absen");
 var historyProblem = require("./history/historyProblem");
 var timerange = require("./TimeRange/index");
+var machineOpNo = require("./MachineOpNo/machineop");
+var Tools = require("./MasterTools/masterTools");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -63,5 +65,7 @@ router.use("/problem", problem);
 router.use("/oee", OEE);
 router.use("/analisa", analisa);
 router.use("/history-problem", historyProblem);
-router.use("/masterTimerange", timerange)
+router.use("/masterTimerange", timerange);
+router.use("/masterMachineOpNo", machineOpNo);
+router.use("/masterToolsList", Tools);
 module.exports = router;
