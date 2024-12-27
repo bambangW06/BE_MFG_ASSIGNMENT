@@ -36,6 +36,7 @@ var machineOpNo = require("./MachineOpNo/machineop");
 var Tools = require("./MasterTools/masterTools");
 var masterLines = require("./MasterLines/index");
 var masterMachines = require("./MasterMachines/index");
+var coolant = require("./HistoryKuras/index");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -72,4 +73,5 @@ router.use("/masterMachineOpNo", machineOpNo);
 router.use("/masterToolsList", Tools);
 router.use("/masterLines", masterLines);
 router.use("/masterMachines", masterMachines);
+router.use("/coolant", coolant);
 module.exports = router;
