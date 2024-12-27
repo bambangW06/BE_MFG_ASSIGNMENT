@@ -9,6 +9,13 @@ module.exports = {
       const userDataQuery = await client.query(q);
       const userData = userDataQuery.rows;
       client.release();
+      if (userData.length > 0) {
+        userData.forEach((row) => {
+          row.register_dt = moment(row.register_dt)
+            .tz("Asia/Jakarta")
+            .format("DD-MM-YYYY");
+        });
+      }
       res.status(200).json({
         message: "success",
         data: userData,

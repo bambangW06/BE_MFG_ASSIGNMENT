@@ -32,22 +32,20 @@ module.exports = {
 
       const scheduleData = [];
 
-      for (const machine of machines) {
-        const values = [
-          line_id,
-          line_nm,
-          machine.machine_id,
-          machine.machine_nm,
-          last_krs,
-          shift,
-          periodVal,
-          periodNm,
-        ];
-        const client = await database.connect();
-        const userDataQuery = await client.query(q, values);
-        scheduleData.push(userDataQuery.rows[0]);
-        client.release();
-      }
+      const values = [
+        line_id,
+        line_nm,
+        machines.machine_id,
+        machines.machine_nm,
+        last_krs,
+        shift,
+        periodVal,
+        periodNm,
+      ];
+      const client = await database.connect();
+      const userDataQuery = await client.query(q, values);
+      scheduleData.push(userDataQuery.rows[0]);
+      client.release();
       res.status(201).json({
         message: "Success to Add Schedule",
         data: scheduleData,
@@ -90,6 +88,7 @@ module.exports = {
           t1.machine_nm = t2.machine_nm AND
           t1.last_krs = t2.max_krs
         ${whereCond}
+        ORDER BY t1.last_krs DESC
       `;
 
       const scheduleDataQuery = await client.query(q, values);
