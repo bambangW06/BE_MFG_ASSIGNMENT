@@ -74,4 +74,6 @@ router.use("/masterToolsList", Tools);
 router.use("/masterLines", masterLines);
 router.use("/masterMachines", masterMachines);
 router.use("/coolant", coolant);
+router.use("/masterProblems", require("./MasterProblems/index"));
+
 module.exports = router;
