@@ -86,6 +86,7 @@ module.exports = {
         tool_id,
         time_range,
         problem_nm,
+        other_nm,
         act_counter,
         mode,
         problem_id,
@@ -124,6 +125,9 @@ module.exports = {
           values.push(act_counter);
         }
 
+        setClause.push(`other_nm = $${values.length + 1}`);
+        values.push(other_nm ?? null); // Jika undefined/null, set ke NULL
+
         // Menambahkan `problem_id` untuk kondisi `WHERE`
         values.push(problem_id);
 
@@ -133,8 +137,8 @@ module.exports = {
         )} WHERE problem_id = $${values.length} RETURNING *`;
       } else {
         // Query untuk mode 'add' atau INSERT
-        query = `INSERT INTO tb_r_next_process (line_id, machine_id, tool_id, time_range, problem_nm, act_counter, created_dt) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`;
+        query = `INSERT INTO tb_r_next_process (line_id, machine_id, tool_id, time_range, problem_nm, act_counter, created_dt, other_nm) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`;
         values = [
           line_id,
           machine_id,
@@ -143,6 +147,7 @@ module.exports = {
           problem_nm,
           act_counter,
           created_dt,
+          other_nm,
         ];
       }
 
