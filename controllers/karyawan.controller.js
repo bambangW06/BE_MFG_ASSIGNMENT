@@ -152,9 +152,6 @@ module.exports = {
       // Hapus dulu data absensi yang terkait dengan karyawan
       const deleteAbsencesQuery = `DELETE FROM tb_m_absences WHERE employee_id = $1`;
       await client.query(deleteAbsencesQuery, [id]);
-      // Hapus data yang mengacu pada employee_id di tabel tb_r_position
-      const deletePositionQuery = `DELETE FROM tb_r_position WHERE employee_id = $1`;
-      await client.query(deletePositionQuery, [id]);
 
       // Hapus data karyawan
       const deleteEmployeeQuery = `DELETE FROM tb_m_employees WHERE employee_id = $1`;

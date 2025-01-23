@@ -11,12 +11,12 @@ module.exports = {
         selectedTool,
         category_id,
       } = req.query;
-      console.log("selectedMonth", selectedMonth);
-      console.log("selectedProblem", selectedProblem);
-      console.log("selectedLine", selectedLine);
-      console.log("selectedMachine", selectedMachine);
-      console.log("selectedTool", selectedTool);
-      console.log("selectedCategory", category_id);
+      // console.log("selectedMonth", selectedMonth);
+      // console.log("selectedProblem", selectedProblem);
+      // console.log("selectedLine", selectedLine);
+      // console.log("selectedMachine", selectedMachine);
+      // console.log("selectedTool", selectedTool);
+      // console.log("selectedCategory", category_id);
 
       // Set default value for selectedMonth if not provided
       if (!selectedMonth) {
