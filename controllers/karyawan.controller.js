@@ -146,15 +146,14 @@ module.exports = {
       const id = req.params.id;
 
       // Mulai transaksi
-      const client = await database.connect();
+       client = await database.connect();
       await client.query("BEGIN");
 
       // Hapus dulu data absensi yang terkait dengan karyawan
       const deleteAbsencesQuery = `DELETE FROM tb_m_absences WHERE employee_id = $1`;
       await client.query(deleteAbsencesQuery, [id]);
-      // Hapus dulu data absensi yang terkait dengan karyawan
-      const deletePositonQuery = `DELETE FROM tb_r_position WHERE employee_id = $1`;
-      await client.query(deletePositonQuery, [id]);
+      const deletePopsitonQuery = `DELETE FROM tb_r_position WHERE employee_id = $1`;
+      await client.query(deletePopsitonQuery, [id]);
       // Hapus data karyawan
       const deleteEmployeeQuery = `DELETE FROM tb_m_employees WHERE employee_id = $1`;
       await client.query(deleteEmployeeQuery, [id]);
