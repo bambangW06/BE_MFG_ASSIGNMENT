@@ -76,5 +76,6 @@ router.use("/masterMachines", masterMachines);
 router.use("/coolant", coolant);
 router.use("/masterProblems", require("./MasterProblems/index"));
 router.use("/pareto", require("./Pareto/index"));
+router.use("/historySPV", require("./absenSPV/index"));
 
 module.exports = router;
