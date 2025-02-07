@@ -15,7 +15,7 @@ module.exports = {
           ON emp.employee_id = abs.employee_id 
           AND DATE(abs.created_dt) = $1
           AND EXTRACT(HOUR FROM abs.created_dt) BETWEEN 7 AND 19
-        WHERE emp.jabatan = 'Supervisor';
+        WHERE emp.jabatan = 'Section Head';
       `;
 
       const result = await database.query(query, [today]);
@@ -39,9 +39,10 @@ module.exports = {
       console.log("Selected Month:", selectedMonth);
 
       // Ambil Supervisor (hanya 1)
-      const supervisorQuery = `SELECT employee_id FROM tb_m_employees WHERE jabatan = 'Supervisor'`;
+      const supervisorQuery = `SELECT employee_id FROM tb_m_employees WHERE jabatan = 'Section Head'`;
       const supervisorResult = await client.query(supervisorQuery);
       const supervisor = supervisorResult.rows[0]; // ⬅️ Ambil data pertama
+      console.log("Supervisor:", supervisor);
 
       const supervisorId = supervisor.employee_id;
 

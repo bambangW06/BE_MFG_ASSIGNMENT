@@ -32,7 +32,7 @@ module.exports = {
 
   getSupervisor: async (req, res) => {
     try {
-      const jabatan = "Supervisor";
+      const jabatan = "Section Head";
       const q = `SELECT *, profile AS photourl FROM tb_m_employees WHERE jabatan = $1`;
       const client = await database.connect();
       const userDataQuery = await client.query(q, [jabatan]);
