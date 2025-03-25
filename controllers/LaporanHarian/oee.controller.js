@@ -136,12 +136,12 @@ module.exports = {
         }
       }
 
-      console.log(
-        "Rentang waktu shift:",
-        startShift.format("YYYY-MM-DD HH:mm:ss"),
-        "sampai",
-        endShift.format("YYYY-MM-DD HH:mm:ss")
-      );
+      // console.log(
+      //   "Rentang waktu shift:",
+      //   startShift.format("YYYY-MM-DD HH:mm:ss"),
+      //   "sampai",
+      //   endShift.format("YYYY-MM-DD HH:mm:ss")
+      // );
 
       // Query untuk mengambil data OEE berdasarkan shift dan rentang waktu
       const q = `SELECT * FROM tb_r_oee WHERE shift = $1 AND created_dt BETWEEN $2 AND $3;`;
@@ -174,6 +174,27 @@ module.exports = {
       // Dapatkan waktu sekarang dalam timezone Asia/Jakarta
       const now = moment().tz("Asia/Jakarta");
       // const now = moment.tz("2024-10-20 07:01", "Asia/Jakarta"); // Simulasi waktu
+
+      let shiftDate;
+      if (now.hour() < 7) {
+        // Jika request antara 00:00 - 07:00, ambil shift dari tanggal kemarin
+        shiftDate = now.clone().subtract(1, "days").format("YYYY-MM-DD");
+      } else {
+        // Jika request setelah 07:00, ambil shift dari hari ini
+        shiftDate = now.clone().format("YYYY-MM-DD");
+      }
+      // console.log("shiftDate", shiftDate);
+      // Ambil current_shift berdasarkan shiftDate
+      const shiftQuery = `
+                          SELECT current_shift FROM tb_m_current_shift 
+                          WHERE today = $1
+                          LIMIT 1;
+                        `;
+      const shiftResult = await client.query(shiftQuery, [shiftDate]);
+
+      const currentShift =
+        shiftResult.rowCount > 0 ? shiftResult.rows[0].current_shift : null;
+      // console.log("currentShift", currentShift);
 
       let startShift, endShift;
 
@@ -255,14 +276,18 @@ module.exports = {
             FROM tb_m_absences a
             JOIN tb_m_employees e ON a.employee_id = e.employee_id
             WHERE a.created_dt >= $1
-              AND a.created_dt < $2;
+              AND a.created_dt < $2
+              AND a.current_shift = $3
         `;
 
       const absensiDataQuery = await client.query(q, [
         startShift.format(),
         endShift.format(),
+        currentShift,
       ]);
       const absensiData = absensiDataQuery.rows;
+      // console.log("absensiData", absensiData);
+
       client.release();
 
       res.status(200).json({ message: "Success", data: absensiData });

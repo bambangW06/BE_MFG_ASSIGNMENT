@@ -5,35 +5,35 @@ const GET_LAST_ID = require("../../function/GET_LAST_ID");
 module.exports = {
   getMasterMachines: async (req, res) => {
     try {
-      let line_id = req.query.line_id;
-      console.log("line_id:", line_id);
+      let root_line_id = req.query.line_id;
+      console.log("line_id:", root_line_id);
 
       // Validasi line_id, pastikan line_id bukan undefined atau string 'undefined'
-      if (line_id === "undefined" || line_id === undefined) {
-        line_id = null; // Atur line_id menjadi null jika tidak ada
+      if (root_line_id === "undefined" || root_line_id === undefined) {
+        root_line_id = null; // Atur line_id menjadi null jika tidak ada
       }
 
-      // Query untuk mengambil data
       let query = `
-        SELECT 
-          m.*, 
-          l.line_nm 
-        FROM 
-          tb_m_machines m
-        LEFT JOIN 
-          tb_m_lines l 
-        ON 
-          m.root_line_id = l.line_id
-        ORDER BY  
-          m.machine_id DESC
-      `;
+  SELECT 
+    m.*, 
+    l.line_nm 
+  FROM 
+    tb_m_machines m
+  LEFT JOIN 
+    tb_m_lines l 
+  ON 
+    m.root_line_id = l.line_id
+`;
+
       const params = [];
 
-      // Jika line_id valid, tambahkan kondisi WHERE
-      if (line_id) {
-        query += " WHERE m.line_id = $1";
-        params.push(line_id);
+      if (root_line_id !== null) {
+        // Gunakan pengecekan lebih spesifik
+        query += " WHERE m.root_line_id = $1";
+        params.push(root_line_id);
       }
+
+      query += " ORDER BY m.machine_id DESC"; // Pindahkan ORDER BY ke akhir
 
       const client = await database.connect(); // Ambil koneksi dari pool
       const result = await client.query(query, params); // Eksekusi query
@@ -76,11 +76,13 @@ module.exports = {
       console.log("lastId", lastId);
 
       const insertQuery = `
-        INSERT INTO tb_m_machines (machine_id, root_line_id,cell_nm, machine_nm, machine_desc, machine_maker,  created_dt, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO tb_m_machines (line_id, idx_pos, machine_id, root_line_id,cell_nm, machine_nm, machine_desc, machine_maker,  created_dt, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         RETURNING *;
       `;
       const values = [
+        data.line_id,
+        data.idx_pos,
         lastId,
         data.root_line_id,
         data.cell_nm,
@@ -170,6 +172,56 @@ module.exports = {
       console.error("Error in deleteMasterMachine:", error);
       res.status(500).json({
         message: "Failed to Delete Data",
+      });
+    }
+  },
+  getCellNm: async (req, res) => {
+    try {
+      const root_line_id = req.params.root_line_id;
+      const query = `SELECT DISTINCT (cell_nm) cell_nm, line_id 
+                     FROM tb_m_machines WHERE root_line_id = $1 
+                     ORDER BY cell_nm ASC`;
+      const client = await database.connect();
+      const userDataQuery = await client.query(query, [root_line_id]);
+      const userData = userDataQuery.rows;
+      client.release();
+      res.status(200).json({
+        message: "Success to Get Data",
+        data: userData,
+      });
+    } catch (error) {
+      console.error("Error in getCellNm:", error);
+      res.status(500).json({
+        message: "Server error",
+      });
+    }
+  },
+  getLastIndex: async (req, res) => {
+    try {
+      const root_line_id = req.query.root_line_id;
+      const line_id = req.query.line_id;
+      const cell_nm = req.query.cell_nm;
+
+      const query = ` SELECT COALESCE(MAX(idx_pos), 0) + 1 AS maxIdx
+                      FROM tb_m_machines
+                      WHERE root_line_id = $1 AND line_id = $2 AND cell_nm = $3;`;
+      const client = await database.connect();
+      const userDataQuery = await client.query(query, [
+        root_line_id,
+        line_id,
+        cell_nm,
+      ]);
+      const userData = userDataQuery.rows;
+      console.log("userData", userData);
+
+      client.release();
+      res.status(200).json({
+        message: "Success to Get Data",
+        data: userData,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Server error",
       });
     }
   },
