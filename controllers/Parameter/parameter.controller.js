@@ -45,6 +45,7 @@ module.exports = {
   addParamterChecks: async (req, res) => {
     try {
       const data = req.body;
+      console.log("data", data);
 
       // Hitung nilai judge_sts
       data.judge_sts = "";
@@ -130,6 +131,7 @@ module.exports = {
           updateValues
         );
         client.release();
+        console.log("updatedRows", updatedRows);
 
         res.status(200).json({
           message: "Data updated successfully",
@@ -143,8 +145,8 @@ module.exports = {
 
         const insertQuery = `
         INSERT INTO tb_r_parameters_check 
-        (check_id, shift, machine_id, machine_nm, visual_nm, aroma_nm, sludge_nm, cons_val, ph_val, created_dt, judge_sts)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        (check_id, shift, machine_id, machine_nm, visual_nm, aroma_nm, sludge_nm, cons_val, ph_val, created_dt, judge_sts, pic_check)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING *
       `;
         const insertValues = [
@@ -156,9 +158,10 @@ module.exports = {
           data.aroma_nm,
           data.sludge_nm,
           data.cons_val,
-          data.ph_val,
+          data.ph,
           data.created_dt,
           data.judge_sts,
+          data.pic,
         ];
 
         const { rows: insertedRows } = await client.query(
