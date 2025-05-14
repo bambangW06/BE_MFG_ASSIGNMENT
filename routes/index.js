@@ -81,5 +81,6 @@ router.use("/historySPV", require("./absenSPV/index"));
 router.use("/nonshift", require("./nonshift/index"));
 router.use("/masterOli", masterOli);
 router.use("/pemakaianOli", require("./pemakaianOli/index"));
+router.use("/parametersOptions", require("./Parameter/index"));
 
 module.exports = router;

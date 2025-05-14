@@ -23,23 +23,6 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// Middleware untuk menentukan penggunaan `single` atau `array`
-// const uploadDynamic = (req, res, next) => {
-//   // Gunakan `upload.fields` dengan definisi untuk single dan multiple
-//   upload.fields([{ name: "foto", maxCount: 10 }])(req, res, (err) => {
-//     if (err) {
-//       return next(err); // Jika ada error saat upload
-//     }
-
-//     // Jika hanya satu file, simpan di `req.file` agar konsisten dengan `upload.single`
-//     if (req.files && req.files.foto && req.files.foto.length === 1) {
-//       req.file = req.files.foto[0];
-//       delete req.files; // Hapus `req.files` untuk konsistensi
-//     }
-
-//     next(); // Lanjut ke middleware berikutnya
-//   });
-// };
 const uploadDynamic = (req, res, next) => {
   // Use `upload.fields` to define the fields for single and multiple file uploads
   upload.fields([{ name: "foto", maxCount: 10 }])(req, res, (err) => {
