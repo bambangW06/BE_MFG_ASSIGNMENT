@@ -8,11 +8,18 @@ const {
 module.exports = {
   getParameterOptions: async (req, res) => {
     try {
-      let q = `SELECT * FROM tb_m_options  `;
+      let q = `SELECT * FROM tb_m_options WHERE deleted_at IS NULL`;
       const client = await database.connect();
       const userDataQuery = await client.query(q);
       const userData = userDataQuery.rows;
       client.release();
+      if (userData.length > 0) {
+        userData.forEach((row) => {
+          row.created_dt = moment(row.created_dt)
+            .tz("Asia/Jakarta")
+            .format("YYYY-MM-DD");
+        });
+      }
       res.status(200).json({
         message: "Success to Get Data",
         data: userData,
@@ -183,14 +190,43 @@ module.exports = {
       });
     }
   },
+
   getParameterCheckResult: async (req, res) => {
     try {
-      const today = moment().tz("Asia/Jakarta").format("YYYY-MM-DD");
-      const q = `SELECT * FROM tb_r_parameters_check WHERE created_dt::date = $1;`;
+      const now = moment().tz("Asia/Jakarta");
+      // const now = moment.tz("2025-05-17 07:00", "Asia/Jakarta");
+
+      const startOfShift = moment(now)
+        .tz("Asia/Jakarta")
+        .startOf("day")
+        .add(7, "hours"); // hari ini jam 07:00
+      let start, end;
+
+      if (now.hour() >= 7 && now.hour() < 20) {
+        // Shift pagi: 07:00 - 19:59 → ambil data dari hari ini jam 07:00 sampai besok jam 07:00
+        start = moment(startOfShift);
+        end = moment(startOfShift).add(1, "day");
+      } else {
+        // Shift malam: 20:00 - 06:59 → ambil data dari hari ini jam 07:00 sampai besok jam 07:00
+        start = moment(startOfShift);
+        end = moment(startOfShift).add(1, "day");
+      }
+
+      const q = `
+      SELECT * FROM tb_r_parameters_check 
+      WHERE created_dt BETWEEN $1 AND $2
+      ORDER BY created_dt ASC;
+    `;
+
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [today]);
+      const userDataQuery = await client.query(q, [
+        start.toISOString(),
+        end.toISOString(),
+      ]);
       const userData = userDataQuery.rows;
       client.release();
+
+      // Format created_dt kembali ke string lokal
       if (userData.length > 0) {
         userData.forEach((row) => {
           row.created_dt = moment(row.created_dt)
@@ -198,10 +234,16 @@ module.exports = {
             .format("YYYY-MM-DD HH:mm:ss");
         });
       }
+
       res.status(201).json({
         message: "Success to Get Data",
         data: userData,
       });
-    } catch (error) {}
+    } catch (error) {
+      console.error("Error:", error);
+      res.status(500).json({
+        message: "Failed to Get Data",
+      });
+    }
   },
 };

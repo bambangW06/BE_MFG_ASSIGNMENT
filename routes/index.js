@@ -82,5 +82,6 @@ router.use("/nonshift", require("./nonshift/index"));
 router.use("/masterOli", masterOli);
 router.use("/pemakaianOli", require("./pemakaianOli/index"));
 router.use("/parametersOptions", require("./Parameter/index"));
+router.use("/masterOptions", require("./MasterOli/option"));
 
 module.exports = router;
