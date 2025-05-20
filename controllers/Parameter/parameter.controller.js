@@ -1,9 +1,7 @@
 var database = require("../../config/storage");
 var moment = require("moment-timezone");
 const GET_LAST_ID = require("../../function/GET_LAST_ID");
-const {
-  getParameter,
-} = require("../machiningControllers/parameters.controller");
+const { getShiftInterval } = require("../../function/TimeHelpers");
 
 module.exports = {
   getParameterOptions: async (req, res) => {
@@ -193,36 +191,21 @@ module.exports = {
 
   getParameterCheckResult: async (req, res) => {
     try {
-      const now = moment().tz("Asia/Jakarta");
-      // const now = moment.tz("2025-05-17 07:00", "Asia/Jakarta");
-
-      const startOfShift = moment(now)
-        .tz("Asia/Jakarta")
-        .startOf("day")
-        .add(7, "hours"); // hari ini jam 07:00
-      let start, end;
-
-      if (now.hour() >= 7 && now.hour() < 20) {
-        // Shift pagi: 07:00 - 19:59 → ambil data dari hari ini jam 07:00 sampai besok jam 07:00
-        start = moment(startOfShift);
-        end = moment(startOfShift).add(1, "day");
-      } else {
-        // Shift malam: 20:00 - 06:59 → ambil data dari hari ini jam 07:00 sampai besok jam 07:00
-        start = moment(startOfShift);
-        end = moment(startOfShift).add(1, "day");
-      }
+      const now = moment.tz("2025-05-20 07:00", "Asia/Jakarta");
+      const { start, end } = getShiftInterval(now);
 
       const q = `
-      SELECT * FROM tb_r_parameters_check 
-      WHERE created_dt BETWEEN $1 AND $2
-      ORDER BY created_dt ASC;
-    `;
+                SELECT * FROM tb_r_parameters_check 
+                WHERE created_dt BETWEEN $1 AND $2
+                ORDER BY created_dt ASC;
+              `;
+      console.log("QUERY DEBUG:");
+      console.log(
+        `SELECT * FROM tb_r_parameters_check WHERE created_dt BETWEEN '${start}' AND '${end}' ORDER BY created_dt ASC;`
+      );
 
       const client = await database.connect();
-      const userDataQuery = await client.query(q, [
-        start.toISOString(),
-        end.toISOString(),
-      ]);
+      const userDataQuery = await client.query(q, [start, end]);
       const userData = userDataQuery.rows;
       client.release();
 
