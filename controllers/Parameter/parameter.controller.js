@@ -191,7 +191,7 @@ module.exports = {
 
   getParameterCheckResult: async (req, res) => {
     try {
-      const now = moment.tz("2025-05-20 07:00", "Asia/Jakarta");
+      const now = moment.tz("Asia/Jakarta");
       const { start, end } = getShiftInterval(now);
 
       const q = `
