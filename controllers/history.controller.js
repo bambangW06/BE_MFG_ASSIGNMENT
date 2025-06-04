@@ -6,10 +6,16 @@ module.exports = {
       // Ambil parameter selectedMonth dari query, jika ada
       const { selectedMonth } = req.query;
 
-      // Jika selectedMonth ada, gunakan untuk filter, jika tidak gunakan bulan saat ini
-      const monthCondition = selectedMonth
-        ? `EXTRACT(MONTH FROM a.date_absence) = EXTRACT(MONTH FROM TO_DATE('${selectedMonth}-01', 'YYYY-MM-DD'))`
-        : `EXTRACT(MONTH FROM a.date_absence) = EXTRACT(MONTH FROM CURRENT_DATE)`;
+     const monthCondition = selectedMonth
+  ? `
+    EXTRACT(MONTH FROM a.date_absence) = EXTRACT(MONTH FROM TO_DATE('${selectedMonth}-01', 'YYYY-MM-DD'))
+    AND EXTRACT(YEAR FROM a.date_absence) = EXTRACT(YEAR FROM TO_DATE('${selectedMonth}-01', 'YYYY-MM-DD'))
+    `
+  : `
+    EXTRACT(MONTH FROM a.date_absence) = EXTRACT(MONTH FROM CURRENT_DATE)
+    AND EXTRACT(YEAR FROM a.date_absence) = EXTRACT(YEAR FROM CURRENT_DATE)
+    `;
+
 
       // Query untuk mengambil data dari database dengan kondisi bulan dinamis
       const q = `
