@@ -38,6 +38,7 @@ var masterLines = require("./MasterLines/index");
 var masterMachines = require("./MasterMachines/index");
 var coolant = require("./HistoryKuras/index");
 var masterOli = require("./MasterOli/index");
+var historyChemical = require("./HistoryChemical/HistoryChemical");
 
 router.use("/employees", Karyawan);
 router.use("/select", pilih);
@@ -83,5 +84,6 @@ router.use("/masterOli", masterOli);
 router.use("/pemakaianOli", require("./pemakaianOli/index"));
 router.use("/parametersOptions", require("./Parameter/index"));
 router.use("/masterOptions", require("./MasterOli/option"));
+router.use("/historyChemical", historyChemical);
 
 module.exports = router;
