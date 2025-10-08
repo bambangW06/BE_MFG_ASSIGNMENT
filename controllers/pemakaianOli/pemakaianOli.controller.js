@@ -13,8 +13,8 @@ module.exports = {
       const result = await client.query(lastUseageId);
       const newId = result.rows[0].new_id;
       let q = `INSERT INTO tb_r_oil_usage (usage_id, oil_id, oil_nm, type_nm, machine_id, machine_nm, 
-                oil_volume, pic, created_dt) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`;
+                oil_volume, pic, created_dt, note_id, note_nm) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`;
       const values = [
         newId,
         data.oil_id,
@@ -25,6 +25,8 @@ module.exports = {
         data.oil_volume,
         data.pic,
         data.created_dt,
+        data.note_id,
+        data.note_nm,
       ];
       const resultInsert = await client.query(q, values);
       const dataInsert = resultInsert.rows;

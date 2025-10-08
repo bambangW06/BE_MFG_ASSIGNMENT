@@ -85,5 +85,6 @@ router.use("/pemakaianOli", require("./pemakaianOli/index"));
 router.use("/parametersOptions", require("./Parameter/index"));
 router.use("/masterOptions", require("./MasterOli/option"));
 router.use("/historyChemical", historyChemical);
+router.use("/masterNote", require("./notes/MasterNote"));
 
 module.exports = router;

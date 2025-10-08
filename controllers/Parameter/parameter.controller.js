@@ -31,22 +31,56 @@ module.exports = {
   },
   getRangeOptions: async (req, res) => {
     try {
-      let q = `SELECT * FROM tb_m_options_ranged`;
+      const { line_id, machine_id } = req.query;
+      console.log("ini", line_id, machine_id);
+
       const client = await database.connect();
-      const userDataQuery = await client.query(q);
-      const userData = userDataQuery.rows;
+
+      const q = `
+                (
+                  SELECT *, 1 AS priority
+                  FROM tb_m_std_chemicals
+                  WHERE line_id = $1 AND machine_id = $2 AND deleted_dt IS NULL
+                )
+                  UNION ALL
+                (
+                  SELECT *, 2 AS priority
+                  FROM tb_m_std_chemicals
+                  WHERE machine_id = $2 AND line_id IS NULL AND deleted_dt IS NULL
+                )
+                UNION ALL
+                (
+                  SELECT *, 3 AS priority
+                  FROM tb_m_std_chemicals
+                  WHERE line_id = $1 AND machine_id IS NULL AND deleted_dt IS NULL
+                )
+                UNION ALL
+                (
+                  SELECT *, 4 AS priority
+                  FROM tb_m_std_chemicals
+                  WHERE line_id IS NULL AND machine_id IS NULL AND deleted_dt IS NULL
+                )
+                ORDER BY priority
+                LIMIT 1;
+
+    `;
+
+      const result = await client.query(q, [line_id, machine_id]);
       client.release();
+
       res.status(200).json({
         message: "Success to Get Data",
-        data: userData,
+        data: result.rows[0] || null, // ambil 1 yang paling prioritas
       });
     } catch (error) {
+      console.error(error);
       res.status(500).json({
         message: "Failed to Get Data",
-        error: error,
+        error: error.message,
       });
     }
   },
+
   addParamterChecks: async (req, res) => {
     try {
       const data = req.body;
