@@ -49,11 +49,16 @@ module.exports = {
         // --- CASE 3: Tidak ada machine_id maupun line_id ---
         else {
           q = `
-            SELECT *
-            FROM tb_r_oil_usage
-            WHERE created_dt >= '${data.start} 07:00:00'
-            AND created_dt < '${data.end} 07:00:00'
-          `;
+                SELECT 
+                  u.*, 
+                  m.root_line_id AS line_id,
+                  l.line_nm
+                FROM tb_r_oil_usage AS u
+                JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
+                JOIN tb_m_lines AS l ON m.root_line_id = l.line_id
+                WHERE u.created_dt >= '${data.start} 07:00:00'
+                AND u.created_dt < '${data.end} 07:00:00'
+              `;
         }
       }
 
