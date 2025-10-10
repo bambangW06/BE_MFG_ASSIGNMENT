@@ -13,12 +13,13 @@ module.exports = {
         // --- CASE 1: Ada machine_id ---
         if (data.machine_id) {
           q = `
-            SELECT *
-            FROM tb_r_oil_usage
-            WHERE machine_id = ${data.machine_id}
-            AND created_dt >= '${data.start} 07:00:00'
-            AND created_dt < '${data.end} 07:00:00'
-          `;
+      SELECT *
+      FROM tb_r_oil_usage
+      WHERE machine_id = ${data.machine_id}
+      ${data.oil_id ? `AND oil_id = ${data.oil_id}` : ""}
+      AND created_dt >= '${data.start} 07:00:00'
+      AND created_dt < '${data.end} 07:00:00'
+    `;
         }
 
         // --- CASE 2: Ada line_id tapi tidak ada machine_id ---
@@ -26,7 +27,6 @@ module.exports = {
           const machinesQuery = await client.query(
             `SELECT machine_id FROM tb_m_machines WHERE root_line_id = ${data.line_id}`
           );
-
           const machineIds = machinesQuery.rows.map((m) => m.machine_id);
 
           if (machineIds.length === 0) {
@@ -38,27 +38,49 @@ module.exports = {
           }
 
           q = `
-            SELECT *
-            FROM tb_r_oil_usage
-            WHERE machine_id IN (${machineIds.join(",")})
-            AND created_dt >= '${data.start} 07:00:00'
-            AND created_dt < '${data.end} 07:00:00'
-          `;
+      SELECT 
+        u.*, 
+        ${data.oil_id ? "m.root_line_id AS line_id, l.line_nm," : ""}
+        m.machine_nm
+      FROM tb_r_oil_usage AS u
+      JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
+      ${data.oil_id ? "JOIN tb_m_lines AS l ON m.root_line_id = l.line_id" : ""}
+      WHERE u.machine_id IN (${machineIds.join(",")})
+      ${data.oil_id ? `AND u.oil_id = ${data.oil_id}` : ""}
+      AND u.created_dt >= '${data.start} 07:00:00'
+      AND u.created_dt < '${data.end} 07:00:00'
+    `;
         }
 
-        // --- CASE 3: Tidak ada machine_id maupun line_id ---
+        // --- CASE 3: Ada oil_id saja (tanpa line_id & machine_id) ---
+        else if (data.oil_id) {
+          q = `
+      SELECT 
+        u.*, 
+        m.root_line_id AS line_id,
+        l.line_nm
+      FROM tb_r_oil_usage AS u
+      JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
+      JOIN tb_m_lines AS l ON m.root_line_id = l.line_id
+      WHERE u.oil_id = ${data.oil_id}
+      AND u.created_dt >= '${data.start} 07:00:00'
+      AND u.created_dt < '${data.end} 07:00:00'
+    `;
+        }
+
+        // --- CASE 4: Default (tanpa filter apapun) ---
         else {
           q = `
-                SELECT 
-                  u.*, 
-                  m.root_line_id AS line_id,
-                  l.line_nm
-                FROM tb_r_oil_usage AS u
-                JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
-                JOIN tb_m_lines AS l ON m.root_line_id = l.line_id
-                WHERE u.created_dt >= '${data.start} 07:00:00'
-                AND u.created_dt < '${data.end} 07:00:00'
-              `;
+      SELECT 
+        u.*, 
+        m.root_line_id AS line_id,
+        l.line_nm
+      FROM tb_r_oil_usage AS u
+      JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
+      JOIN tb_m_lines AS l ON m.root_line_id = l.line_id
+      WHERE u.created_dt >= '${data.start} 07:00:00'
+      AND u.created_dt < '${data.end} 07:00:00'
+    `;
         }
       }
 
