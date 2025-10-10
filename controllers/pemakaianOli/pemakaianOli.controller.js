@@ -6,40 +6,82 @@ module.exports = {
   addPemakaianOli: async (req, res) => {
     try {
       const data = req.body;
-      // console.log("Request Data:", data);
-
-      const lastUseageId = GET_LAST_ID("usage_id", "tb_r_oil_usage");
       const client = await database.connect();
-      const result = await client.query(lastUseageId);
+
+      const lastUsageId = GET_LAST_ID("usage_id", "tb_r_oil_usage");
+      const result = await client.query(lastUsageId);
       const newId = result.rows[0].new_id;
-      let q = `INSERT INTO tb_r_oil_usage (usage_id, oil_id, oil_nm, type_nm, machine_id, machine_nm, 
-                oil_volume, pic, created_dt, note_id, note_nm) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`;
-      const values = [
-        newId,
-        data.oil_id,
-        data.oil_nm,
-        data.type_nm,
-        data.machine_id,
-        data.machine_nm,
-        data.oil_volume,
-        data.pic,
-        data.created_dt,
-        data.note_id,
-        data.note_nm,
-      ];
+
+      // 🔹 Cek apakah data mixing (tidak ada machine_id tapi ada line_id)
+      let q = "";
+      let values = [];
+
+      if (data.line_id && !data.machine_id) {
+        // === CASE: MIXING REGULER ===
+        q = `
+        INSERT INTO tb_r_oil_usage (
+          usage_id, oil_id, oil_nm, type_nm,
+           oil_volume, pic, created_dt,
+          note_id, note_nm, line_id
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        RETURNING *
+      `;
+        values = [
+          newId,
+          data.oil_id,
+          data.oil_nm,
+          data.type_nm,
+          data.oil_volume,
+          data.pic,
+          data.created_dt,
+          data.note_id,
+          data.note_nm,
+          data.line_id,
+        ];
+      } else {
+        // === CASE: PEMAKAIAN BIASA ===
+        q = `
+        INSERT INTO tb_r_oil_usage (
+          usage_id, oil_id, oil_nm, type_nm,
+          machine_id, machine_nm, oil_volume,
+          pic, created_dt, note_id, note_nm
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        RETURNING *
+      `;
+        values = [
+          newId,
+          data.oil_id,
+          data.oil_nm,
+          data.type_nm,
+          data.machine_id,
+          data.machine_nm,
+          data.oil_volume,
+          data.pic,
+          data.created_dt,
+          data.note_id,
+          data.note_nm,
+        ];
+      }
+
       const resultInsert = await client.query(q, values);
       const dataInsert = resultInsert.rows;
       client.release();
-      res
-        .status(201)
-        .json({ message: "Success to Get Data", data: dataInsert });
+
+      res.status(201).json({
+        message: "Success to Insert Data",
+        data: dataInsert,
+      });
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: "Failed to Get Data", error: error.message });
+      console.error("Error addPemakaianOli:", error);
+      res.status(500).json({
+        message: "Failed to Insert Data",
+        error: error.message,
+      });
     }
   },
+
   getMachines: async (req, res) => {
     try {
       let q = `

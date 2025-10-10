@@ -29,23 +29,24 @@ module.exports = {
           );
           const machineIds = machinesQuery.rows.map((m) => m.machine_id);
 
-          if (machineIds.length === 0) {
-            client.release();
-            return res.status(200).json({
-              message: "No machines found for this line",
-              data: [],
-            });
-          }
-
+          // 🔹 Ambil data dari mesin + data MIXING (machine_id null)
           q = `
       SELECT 
-        u.*, 
-        ${data.oil_id ? "m.root_line_id AS line_id, l.line_nm," : ""}
+        u.*,
+        COALESCE(m.root_line_id, u.line_id) AS line_id,
+        COALESCE(l.line_nm, 'MIXING REGULER') AS line_nm,
         m.machine_nm
       FROM tb_r_oil_usage AS u
-      JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
-      ${data.oil_id ? "JOIN tb_m_lines AS l ON m.root_line_id = l.line_id" : ""}
-      WHERE u.machine_id IN (${machineIds.join(",")})
+      LEFT JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
+      LEFT JOIN tb_m_lines AS l ON COALESCE(m.root_line_id, u.line_id) = l.line_id
+      WHERE (
+        ${
+          machineIds.length > 0
+            ? `u.machine_id IN (${machineIds.join(",")})`
+            : "FALSE"
+        }
+        OR (u.machine_id IS NULL AND u.line_id = ${data.line_id})
+      )
       ${data.oil_id ? `AND u.oil_id = ${data.oil_id}` : ""}
       AND u.created_dt >= '${data.start} 07:00:00'
       AND u.created_dt < '${data.end} 07:00:00'
@@ -57,11 +58,11 @@ module.exports = {
           q = `
       SELECT 
         u.*, 
-        m.root_line_id AS line_id,
-        l.line_nm
+        COALESCE(m.root_line_id, u.line_id) AS line_id,
+        COALESCE(l.line_nm, 'MIXING REGULER') AS line_nm
       FROM tb_r_oil_usage AS u
-      JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
-      JOIN tb_m_lines AS l ON m.root_line_id = l.line_id
+      LEFT JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
+      LEFT JOIN tb_m_lines AS l ON COALESCE(m.root_line_id, u.line_id) = l.line_id
       WHERE u.oil_id = ${data.oil_id}
       AND u.created_dt >= '${data.start} 07:00:00'
       AND u.created_dt < '${data.end} 07:00:00'
@@ -73,11 +74,11 @@ module.exports = {
           q = `
       SELECT 
         u.*, 
-        m.root_line_id AS line_id,
-        l.line_nm
+        COALESCE(m.root_line_id, u.line_id) AS line_id,
+        COALESCE(l.line_nm, 'MIXING REGULER') AS line_nm
       FROM tb_r_oil_usage AS u
-      JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
-      JOIN tb_m_lines AS l ON m.root_line_id = l.line_id
+      LEFT JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
+      LEFT JOIN tb_m_lines AS l ON COALESCE(m.root_line_id, u.line_id) = l.line_id
       WHERE u.created_dt >= '${data.start} 07:00:00'
       AND u.created_dt < '${data.end} 07:00:00'
     `;
