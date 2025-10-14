@@ -134,17 +134,17 @@ module.exports = {
       const client = await database.connect();
 
       const q = `
-        SELECT *,
-          CASE
-            WHEN EXTRACT(HOUR FROM COALESCE(updated_dt, created_dt)) < 7
-              THEN (COALESCE(updated_dt, created_dt) - INTERVAL '1 day')::date
-            ELSE (COALESCE(updated_dt, created_dt))::date
-          END AS display_date
-        FROM tb_r_reservasi_chemical
-        WHERE COALESCE(updated_dt, created_dt) >= $1
-          AND COALESCE(updated_dt, created_dt) < $2
-        ORDER BY COALESCE(updated_dt, created_dt) DESC
-      `;
+                SELECT *,
+                  CASE
+                  WHEN EXTRACT(HOUR FROM created_dt) < 7
+                  THEN (created_dt - INTERVAL '1 day')::date
+                  ELSE created_dt::date
+                  END AS display_date
+                  FROM tb_r_reservasi_chemical
+                  WHERE created_dt >= $1
+                  AND created_dt < $2
+                  ORDER BY created_dt DESC
+                `;
 
       const result = await client.query(q, [
         startDt.format("YYYY-MM-DD HH:mm:ss"),
