@@ -166,4 +166,52 @@ module.exports = {
       });
     }
   },
+  addReservasiNote: async (req, res) => {
+    try {
+      const { reservasi_id, note_id, note_nm } = req.body;
+
+      // Validasi input
+      if (!reservasi_id) {
+        return res.status(400).json({
+          message: "reservasi_id tidak boleh kosong",
+        });
+      }
+
+      const client = await database.connect();
+
+      // UPDATE note di table berdasarkan reservasi_id
+      const updateQuery = `
+      UPDATE tb_r_reservasi_chemical
+      SET note_id = $1,
+          note_nm = $2,
+          updated_dt = NOW()
+      WHERE reservasi_id = $3
+      RETURNING *
+    `;
+
+      const result = await client.query(updateQuery, [
+        note_id,
+        note_nm,
+        reservasi_id,
+      ]);
+      client.release();
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          message: "Data reservasi tidak ditemukan",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Note berhasil disimpan",
+        data: result.rows[0],
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "Gagal menyimpan note",
+        error: error.message,
+      });
+    }
+  },
 };
