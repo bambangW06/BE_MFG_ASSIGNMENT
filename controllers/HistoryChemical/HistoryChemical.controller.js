@@ -19,6 +19,7 @@ module.exports = {
           ${data.oil_id ? `AND oil_id = ${data.oil_id}` : ""}
           AND created_dt >= '${data.start} 07:00:00'
           AND created_dt < '${data.end} 07:00:00'
+          ORDER BY created_dt DESC
         `;
         }
 
@@ -49,6 +50,7 @@ module.exports = {
           ${data.oil_id ? `AND u.oil_id = ${data.oil_id}` : ""}
           AND u.created_dt >= '${data.start} 07:00:00'
           AND u.created_dt < '${data.end} 07:00:00'
+          ORDER BY created_dt DESC
         `;
         }
 
@@ -66,6 +68,7 @@ module.exports = {
           WHERE u.oil_id = ${data.oil_id}
           AND u.created_dt >= '${data.start} 07:00:00'
           AND u.created_dt < '${data.end} 07:00:00'
+          ORDER BY created_dt DESC
         `;
         }
 
@@ -82,6 +85,7 @@ module.exports = {
           LEFT JOIN tb_m_lines AS l ON COALESCE(m.root_line_id, u.line_id) = l.line_id
           WHERE u.created_dt >= '${data.start} 07:00:00'
           AND u.created_dt < '${data.end} 07:00:00'
+          ORDER BY created_dt DESC
         `;
         }
       }
@@ -96,14 +100,14 @@ module.exports = {
         AND created_dt < '${data.end} 07:00:00'
       `;
 
-        // 🔹 Log debug
-        console.log("🧩 Fetching STD Data with params:", {
-          line_id: data.line_id,
-          machine_id: data.machine_id,
-        });
+        // // 🔹 Log debug
+        // console.log("🧩 Fetching STD Data with params:", {
+        //   line_id: data.line_id,
+        //   machine_id: data.machine_id,
+        // });
 
         const std = await getStdChemical(data.line_id, data.machine_id);
-        console.log("📊 STD Data result:", std);
+        // console.log("📊 STD Data result:", std);
 
         const userDataQuery = await client.query(q);
         const userData = userDataQuery.rows;
