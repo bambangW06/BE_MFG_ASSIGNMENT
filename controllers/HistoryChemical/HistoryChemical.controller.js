@@ -10,84 +10,63 @@ module.exports = {
       let q;
 
       if (data.table === "usage") {
-        // --- CASE 1: Ada machine_id ---
+        let baseSelect = `
+    SELECT 
+      u.*, 
+      COALESCE(m.root_line_id, u.line_id) AS line_id,
+      l.line_nm,
+      m.machine_nm
+    FROM tb_r_oil_usage AS u
+    LEFT JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
+    LEFT JOIN tb_m_lines AS l ON COALESCE(m.root_line_id, u.line_id) = l.line_id
+    WHERE u.created_dt >= '${data.start} 07:00:00'
+    AND u.created_dt < '${data.end} 07:00:00'
+  `;
+
+        let filters = [];
+
+        // CASE 1: machine_id
         if (data.machine_id) {
-          q = `
-          SELECT *
-          FROM tb_r_oil_usage
-          WHERE machine_id = ${data.machine_id}
-          ${data.oil_id ? `AND oil_id = ${data.oil_id}` : ""}
-          AND created_dt >= '${data.start} 07:00:00'
-          AND created_dt < '${data.end} 07:00:00'
-          ORDER BY created_dt DESC
-        `;
+          filters.push(`u.machine_id = ${data.machine_id}`);
         }
 
-        // --- CASE 2: Ada line_id tapi tidak ada machine_id ---
+        // CASE 2: line_id tanpa machine_id
         else if (data.line_id) {
           const machinesQuery = await client.query(
             `SELECT machine_id FROM tb_m_machines WHERE root_line_id = ${data.line_id}`
           );
           const machineIds = machinesQuery.rows.map((m) => m.machine_id);
 
-          q = `
-          SELECT 
-            u.*,
-            COALESCE(m.root_line_id, u.line_id) AS line_id,
-            l.line_nm,
-            m.machine_nm
-          FROM tb_r_oil_usage AS u
-          LEFT JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
-          LEFT JOIN tb_m_lines AS l ON COALESCE(m.root_line_id, u.line_id) = l.line_id
-          WHERE (
-            ${
-              machineIds.length > 0
-                ? `u.machine_id IN (${machineIds.join(",")})`
-                : "FALSE"
-            }
-            OR (u.machine_id IS NULL AND u.line_id = ${data.line_id})
-          )
-          ${data.oil_id ? `AND u.oil_id = ${data.oil_id}` : ""}
-          AND u.created_dt >= '${data.start} 07:00:00'
-          AND u.created_dt < '${data.end} 07:00:00'
-          ORDER BY created_dt DESC
-        `;
+          filters.push(`
+      (
+        ${
+          machineIds.length > 0
+            ? `u.machine_id IN (${machineIds.join(",")})`
+            : "FALSE"
+        }
+        OR (u.machine_id IS NULL AND u.line_id = ${data.line_id})
+      )
+    `);
         }
 
-        // --- CASE 3: Ada oil_id saja (tanpa line_id & machine_id) ---
-        else if (data.oil_id) {
-          q = `
-          SELECT 
-            u.*, 
-            COALESCE(m.root_line_id, u.line_id) AS line_id,
-            l.line_nm,
-            m.machine_nm
-          FROM tb_r_oil_usage AS u
-          LEFT JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
-          LEFT JOIN tb_m_lines AS l ON COALESCE(m.root_line_id, u.line_id) = l.line_id
-          WHERE u.oil_id = ${data.oil_id}
-          AND u.created_dt >= '${data.start} 07:00:00'
-          AND u.created_dt < '${data.end} 07:00:00'
-          ORDER BY created_dt DESC
-        `;
+        // CASE 3: oil_id
+        if (data.oil_id) {
+          filters.push(`u.oil_id = ${data.oil_id}`);
         }
 
-        // --- CASE 4: Default (tanpa filter apapun) ---
-        else {
-          q = `
-          SELECT 
-            u.*, 
-            COALESCE(m.root_line_id, u.line_id) AS line_id,
-            l.line_nm,
-            m.machine_nm
-          FROM tb_r_oil_usage AS u
-          LEFT JOIN tb_m_machines AS m ON u.machine_id = m.machine_id
-          LEFT JOIN tb_m_lines AS l ON COALESCE(m.root_line_id, u.line_id) = l.line_id
-          WHERE u.created_dt >= '${data.start} 07:00:00'
-          AND u.created_dt < '${data.end} 07:00:00'
-          ORDER BY created_dt DESC
-        `;
+        // 🆕 CASE 4: note_nm
+        if (data.note_nm) {
+          filters.push(`LOWER(u.note_nm) LIKE LOWER('%${data.note_nm}%')`);
         }
+
+        // Gabungkan semua filter tambahan
+        if (filters.length > 0) {
+          baseSelect += " AND " + filters.join(" AND ");
+        }
+
+        baseSelect += " ORDER BY u.created_dt DESC";
+
+        q = baseSelect;
       }
 
       // --- TABLE PARAMETER ---
