@@ -8,7 +8,6 @@ module.exports = {
       const data = req.body;
       console.log("Request Data:", data);
 
-      const dateOnly = moment(data.created_dt).format("YYYY-MM-DD");
       const client = await database.connect();
 
       // --- CEK RECORD SESUAI OIL_ID + TANGGAL + SHIFT ---
@@ -16,12 +15,12 @@ module.exports = {
       SELECT *
       FROM tb_r_reservasi_chemical
       WHERE oil_id = $1
-        AND DATE(created_dt) = $2
+        AND created_dt = $2
         AND shift = $3
     `;
       const checkResult = await client.query(checkQuery, [
         data.oil_id,
-        dateOnly,
+        data.created_dt,
         data.shift,
       ]);
 
@@ -34,7 +33,7 @@ module.exports = {
           updated_dt = $2,
           updated_by = $3
         WHERE oil_id = $4
-          AND DATE(created_dt) = $5
+          AND created_dt = $5
           AND shift = $6
         RETURNING *
       `;
@@ -43,7 +42,7 @@ module.exports = {
           new Date(),
           data.created_by,
           data.oil_id,
-          dateOnly,
+          data.created_dt,
           data.shift,
         ]);
 
@@ -96,59 +95,39 @@ module.exports = {
 
   getReservasi: async (req, res) => {
     try {
-      // Tangkap month dari query string
+      // === Ambil parameter month (format: "YYYY-MM") ===
       let month = req.query.month;
-      let monthStr;
+      let monthStr =
+        typeof month === "string"
+          ? month
+          : month && typeof month.month === "string"
+          ? month.month
+          : null;
 
-      if (typeof month === "string") {
-        monthStr = month;
-      } else if (month && typeof month.month === "string") {
-        monthStr = month.month;
-      } else {
-        monthStr = null;
-      }
-
+      // === Hitung rentang tanggal (1 awal bulan - 1 awal bulan berikutnya) ===
       let startDt, endDt;
-
       if (monthStr) {
-        // Buat tanggal awal bulan + jam 7 pagi
         const [y, m] = monthStr.split("-");
-        startDt = moment.tz(
-          `${y}-${m}-01 07:00:00`,
-          "YYYY-MM-DD HH:mm:ss",
-          "Asia/Jakarta"
-        );
+        startDt = moment.tz(`${y}-${m}-01`, "YYYY-MM-DD", "Asia/Jakarta");
       } else {
-        // Bulan sekarang
-        startDt = moment()
-          .tz("Asia/Jakarta")
-          .startOf("month")
-          .hour(7)
-          .minute(0)
-          .second(0);
+        startDt = moment().tz("Asia/Jakarta").startOf("month");
       }
-
-      // Tanggal 1 bulan berikutnya jam 7 pagi
       endDt = startDt.clone().add(1, "months");
 
       const client = await database.connect();
 
       const q = `
-                SELECT *,
-                  CASE
-                  WHEN EXTRACT(HOUR FROM created_dt) < 7
-                  THEN (created_dt - INTERVAL '1 day')::date
-                  ELSE created_dt::date
-                  END AS display_date
-                  FROM tb_r_reservasi_chemical
-                  WHERE created_dt >= $1
-                  AND created_dt < $2
-                  ORDER BY created_dt DESC
-                `;
+      SELECT *,
+        created_dt AS display_date
+      FROM tb_r_reservasi_chemical
+      WHERE created_dt >= $1::date
+      AND created_dt < $2::date
+      ORDER BY created_dt DESC
+    `;
 
       const result = await client.query(q, [
-        startDt.format("YYYY-MM-DD HH:mm:ss"),
-        endDt.format("YYYY-MM-DD HH:mm:ss"),
+        startDt.format("YYYY-MM-DD"),
+        endDt.format("YYYY-MM-DD"),
       ]);
 
       const userData = result.rows;
@@ -166,6 +145,7 @@ module.exports = {
       });
     }
   },
+
   addReservasiNote: async (req, res) => {
     try {
       const { reservasi_id, note_id, note_nm } = req.body;
