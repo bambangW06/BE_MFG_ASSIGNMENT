@@ -3,54 +3,220 @@ const moment = require("moment-timezone");
 const GET_LAST_ID = require("../../function/GET_LAST_ID");
 
 module.exports = {
+  // addPemakaianOli: async (req, res) => {
+  //   try {
+  //     const data = req.body;
+  //     console.log("data", data);
+
+  //     const client = await database.connect();
+
+  //     const lastUsageId = GET_LAST_ID("usage_id", "tb_r_oil_usage");
+  //     const result = await client.query(lastUsageId);
+  //     const newId = result.rows[0].new_id;
+
+  //     // 🔹 Cek apakah data mixing (tidak ada machine_id tapi ada line_id)
+  //     let q = "";
+  //     let values = [];
+
+  //     if (data.line_id && !data.machine_id) {
+  //       // === CASE: MIXING REGULER ===
+  //       q = `
+  //       INSERT INTO tb_r_oil_usage (
+  //         usage_id, oil_id, oil_nm, type_nm,
+  //          oil_volume, pic, created_dt,
+  //         note_id, note_nm, line_id, shift_type
+  //       )
+  //       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+  //       RETURNING *
+  //     `;
+  //       values = [
+  //         newId,
+  //         data.oil_id,
+  //         data.oil_nm,
+  //         data.type_nm,
+  //         data.oil_volume,
+  //         data.pic,
+  //         data.created_dt,
+  //         data.note_id,
+  //         data.note_nm,
+  //         data.line_id,
+  //         data.shift,
+  //       ];
+  //     } else {
+  //       // === CASE: PEMAKAIAN BIASA ===
+  //       q = `
+  //       INSERT INTO tb_r_oil_usage (
+  //         usage_id, oil_id, oil_nm, type_nm,
+  //         machine_id, machine_nm, oil_volume,
+  //         pic, created_dt, note_id, note_nm,shift_type
+  //       )
+  //       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+  //       RETURNING *
+  //     `;
+  //       values = [
+  //         newId,
+  //         data.oil_id,
+  //         data.oil_nm,
+  //         data.type_nm,
+  //         data.machine_id,
+  //         data.machine_nm,
+  //         data.oil_volume,
+  //         data.pic,
+  //         data.created_dt,
+  //         data.note_id,
+  //         data.note_nm,
+  //         data.shift,
+  //       ];
+  //     }
+
+  //     const resultInsert = await client.query(q, values);
+  //     const dataInsert = resultInsert.rows;
+  //     client.release();
+
+  //     res.status(201).json({
+  //       message: "Success to Insert Data",
+  //       data: dataInsert,
+  //     });
+  //   } catch (error) {
+  //     console.error("Error addPemakaianOli:", error);
+  //     res.status(500).json({
+  //       message: "Failed to Insert Data",
+  //       error: error.message,
+  //     });
+  //   }
+  // },
+
   addPemakaianOli: async (req, res) => {
     try {
       const data = req.body;
+      console.log("data", data);
+
       const client = await database.connect();
+      const todayDate = data.created_dt.split("T")[0]; // YYYY-MM-DD
 
-      const lastUsageId = GET_LAST_ID("usage_id", "tb_r_oil_usage");
-      const result = await client.query(lastUsageId);
-      const newId = result.rows[0].new_id;
-
-      // 🔹 Cek apakah data mixing (tidak ada machine_id tapi ada line_id)
-      let q = "";
-      let values = [];
-
+      // === CASE: MIXING REGULER ===
       if (data.line_id && !data.machine_id) {
-        // === CASE: MIXING REGULER ===
-        q = `
-        INSERT INTO tb_r_oil_usage (
-          usage_id, oil_id, oil_nm, type_nm,
-           oil_volume, pic, created_dt,
-          note_id, note_nm, line_id
-        )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-        RETURNING *
+        const checkQuery = `
+        SELECT usage_id FROM tb_r_oil_usage
+        WHERE line_id = $1
+          AND oil_id = $2
+          AND note_nm = $3
+          AND CAST(created_dt AS DATE) = $4
       `;
-        values = [
-          newId,
+        const checkResult = await client.query(checkQuery, [
+          data.line_id,
           data.oil_id,
-          data.oil_nm,
-          data.type_nm,
+          data.note_nm,
+          todayDate,
+        ]);
+
+        if (checkResult.rowCount > 0) {
+          // === UPDATE ===
+          const usageId = checkResult.rows[0].usage_id;
+          const updateQuery = `
+          UPDATE tb_r_oil_usage
+          SET oil_volume = $1,
+              pic = $2
+          WHERE usage_id = $3
+          RETURNING *;
+        `;
+          const updated = await client.query(updateQuery, [
+            data.oil_volume,
+            data.pic,
+            usageId,
+          ]);
+          client.release();
+          return res.status(201).json({
+            message: "Data updated (mixing)",
+            data: updated.rows,
+          });
+        } else {
+          // === INSERT baru ===
+          const lastUsageId = GET_LAST_ID("usage_id", "tb_r_oil_usage");
+          const result = await client.query(lastUsageId);
+          const newId = result.rows[0].new_id;
+
+          const insertQuery = `
+          INSERT INTO tb_r_oil_usage (
+            usage_id, oil_id, oil_nm, type_nm,
+            oil_volume, pic, created_dt,
+            note_id, note_nm, line_id, shift_type
+          )
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+          RETURNING *;
+        `;
+          const inserted = await client.query(insertQuery, [
+            newId,
+            data.oil_id,
+            data.oil_nm,
+            data.type_nm,
+            data.oil_volume,
+            data.pic,
+            data.created_dt,
+            data.note_id,
+            data.note_nm,
+            data.line_id,
+            data.shift,
+          ]);
+          client.release();
+          return res.status(201).json({
+            message: "New mixing data inserted",
+            data: inserted.rows,
+          });
+        }
+      }
+
+      // === CASE: PEMAKAIAN BIASA ===
+      const checkQuery = `
+      SELECT usage_id FROM tb_r_oil_usage
+      WHERE machine_id = $1
+        AND oil_id = $2
+        AND note_nm = $3
+        AND CAST(created_dt AS DATE) = $4
+    `;
+      const checkResult = await client.query(checkQuery, [
+        data.machine_id,
+        data.oil_id,
+        data.note_nm,
+        todayDate,
+      ]);
+
+      if (checkResult.rowCount > 0) {
+        // === UPDATE (hanya oil_volume & pic) ===
+        const usageId = checkResult.rows[0].usage_id;
+        const updateQuery = `
+        UPDATE tb_r_oil_usage
+        SET oil_volume = $1,
+            pic = $2
+        WHERE usage_id = $3
+        RETURNING *;
+      `;
+        const updated = await client.query(updateQuery, [
           data.oil_volume,
           data.pic,
-          data.created_dt,
-          data.note_id,
-          data.note_nm,
-          data.line_id,
-        ];
+          usageId,
+        ]);
+        client.release();
+        return res.status(201).json({
+          message: "Data updated successfully",
+          data: updated.rows,
+        });
       } else {
-        // === CASE: PEMAKAIAN BIASA ===
-        q = `
+        // === INSERT baru ===
+        const lastUsageId = GET_LAST_ID("usage_id", "tb_r_oil_usage");
+        const result = await client.query(lastUsageId);
+        const newId = result.rows[0].new_id;
+
+        const insertQuery = `
         INSERT INTO tb_r_oil_usage (
           usage_id, oil_id, oil_nm, type_nm,
           machine_id, machine_nm, oil_volume,
-          pic, created_dt, note_id, note_nm
+          pic, created_dt, note_id, note_nm, shift_type
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-        RETURNING *
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+        RETURNING *;
       `;
-        values = [
+        const inserted = await client.query(insertQuery, [
           newId,
           data.oil_id,
           data.oil_nm,
@@ -62,21 +228,19 @@ module.exports = {
           data.created_dt,
           data.note_id,
           data.note_nm,
-        ];
+          data.shift,
+        ]);
+
+        client.release();
+        return res.status(201).json({
+          message: "New data inserted",
+          data: inserted.rows,
+        });
       }
-
-      const resultInsert = await client.query(q, values);
-      const dataInsert = resultInsert.rows;
-      client.release();
-
-      res.status(201).json({
-        message: "Success to Insert Data",
-        data: dataInsert,
-      });
     } catch (error) {
       console.error("Error addPemakaianOli:", error);
       res.status(500).json({
-        message: "Failed to Insert Data",
+        message: "Failed to insert/update data",
         error: error.message,
       });
     }
