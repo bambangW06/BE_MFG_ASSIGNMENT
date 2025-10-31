@@ -1,9 +1,9 @@
-name: Deploy Backend to VPS
+name: Deploy Backend TCM to VPS
 
 on:
   push:
     branches:
-      - main  # Ganti sesuai branch yang kamu pakai
+      - main  # atau branch yang kamu pakai
 
 jobs:
   deploy:
@@ -23,6 +23,6 @@ jobs:
           ssh -vvv -p 2025 -o StrictHostKeyChecking=no bambang@202.10.40.134 "echo 'SSH connection works!'"
 
       - name: Deploy to VPS
-        if: success()  # Hanya jalan kalau step test SSH berhasil
+        if: success()
         run: |
           ssh -p 2025 -o StrictHostKeyChecking=no bambang@202.10.40.134 "cd ~/ToolCoolantMngmt_BackEnd && ./deploy.sh"
