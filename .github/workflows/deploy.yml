@@ -1,9 +1,9 @@
-name: Deploy Backend TCM to VPS
+name: Deploy Backend to VPS
 
 on:
   push:
     branches:
-      - main
+      - bambang  # Ganti kalau branch kamu beda
 
 jobs:
   deploy:
