@@ -3,7 +3,7 @@ name: Deploy Backend to VPS
 on:
   push:
     branches:
-      - bambang  # Ganti kalau branch kamu beda
+      - main  # Ganti sesuai branch yang kamu pakai
 
 jobs:
   deploy:
@@ -18,6 +18,11 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.VPS_KEY }}
 
+      - name: Test SSH to VPS (verbose)
+        run: |
+          ssh -vvv -p 2025 -o StrictHostKeyChecking=no bambang@202.10.40.134 "echo 'SSH connection works!'"
+
       - name: Deploy to VPS
+        if: success()  # Hanya jalan kalau step test SSH berhasil
         run: |
           ssh -p 2025 -o StrictHostKeyChecking=no bambang@202.10.40.134 "cd ~/ToolCoolantMngmt_BackEnd && ./deploy.sh"
