@@ -3,7 +3,7 @@ name: Deploy Backend TCM to VPS
 on:
   push:
     branches:
-      - master   # atau 'main' kalau branch kamu bukan master
+      - main   # branch utama
 
 jobs:
   deploy:
@@ -18,7 +18,8 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.VPS_KEY }}
 
-      - name: Deploy to VPS
-        run: |
-          ssh -o StrictHostKeyChecking=no bambang@202.10.40.134 "cd ~/ToolCoolantMngmt_BackEnd && ./deploy.sh"
+      - name: Add VPS to known_hosts
+        run: ssh-keyscan -H 202.10.40.134 >> ~/.ssh/known_hosts
 
+      - name: Deploy to VPS
+        run: ssh bambang@202.10.40.134 "cd ~/ToolCoolantMngmt_BackEnd && ./deploy.sh"
