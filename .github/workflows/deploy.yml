@@ -10,20 +10,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout kode
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Setup SSH agent dengan private key dari GitHub Secrets
       - name: Set up SSH
         uses: webfactory/ssh-agent@v0.7.0
         with:
-          ssh-private-key: ${{ secrets.VPS_KEY }}  # Pastikan ini adalah private key lengkap
+          ssh-private-key: ${{ secrets.VPS_KEY_TCM }}
 
-      # 3. Test SSH
       - name: Test SSH to VPS (verbose)
         run: ssh -vvv -p 2025 -o StrictHostKeyChecking=no bambang@202.10.40.134 "echo 'SSH connection works!'"
 
-      # 4. Deploy
       - name: Deploy to VPS
         run: ssh -p 2025 -o StrictHostKeyChecking=no bambang@202.10.40.134 "cd ~/ToolCoolantMngmt_BackEnd && ./deploy.sh"
