@@ -87,5 +87,6 @@ router.use("/masterOptions", require("./MasterOli/option"));
 router.use("/historyChemical", historyChemical);
 router.use("/masterNote", require("./notes/MasterNote"));
 router.use("/reservasiChemical", require("./Reservasi/reservasi"));
+router.use("/auth", require("./login/index"));
 
 module.exports = router;
