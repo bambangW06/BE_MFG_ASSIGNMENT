@@ -97,16 +97,18 @@ module.exports = {
       // === CASE: MIXING REGULER ===
       if (data.line_id && !data.machine_id) {
         const checkQuery = `
-        SELECT usage_id FROM tb_r_oil_usage
-        WHERE line_id = $1
-          AND oil_id = $2
-          AND note_nm = $3
-          AND CAST(created_dt AS DATE) = $4
-      `;
+  SELECT usage_id FROM tb_r_oil_usage
+  WHERE line_id = $1
+    AND oil_id = $2
+    AND note_nm = $3
+    AND pic = $4
+    AND CAST(created_dt AS DATE) = $5
+`;
         const checkResult = await client.query(checkQuery, [
           data.line_id,
           data.oil_id,
           data.note_nm,
+          data.pic, // <-- tambah ini
           todayDate,
         ]);
 
@@ -168,16 +170,18 @@ module.exports = {
 
       // === CASE: PEMAKAIAN BIASA ===
       const checkQuery = `
-      SELECT usage_id FROM tb_r_oil_usage
-      WHERE machine_id = $1
-        AND oil_id = $2
-        AND note_nm = $3
-        AND CAST(created_dt AS DATE) = $4
-    `;
+          SELECT usage_id FROM tb_r_oil_usage
+          WHERE machine_id = $1
+            AND oil_id = $2
+            AND note_nm = $3
+            AND pic = $4        -- <-- tambah ini
+            AND CAST(created_dt AS DATE) = $5
+        `;
       const checkResult = await client.query(checkQuery, [
         data.machine_id,
         data.oil_id,
         data.note_nm,
+        data.pic, // <-- tambah ini
         todayDate,
       ]);
 
