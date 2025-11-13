@@ -15,6 +15,13 @@ module.exports = {
         actualDate,
         status,
       } = req.body;
+      // Pastikan format tanggal sesuai PostgreSQL (YYYY-MM-DD)
+      let formattedActualDate = null;
+      if (actualDate) {
+        formattedActualDate = moment(actualDate, "DD-MM-YYYY").format(
+          "YYYY-MM-DD"
+        );
+      }
 
       // console.log("Data yang diterima dari req.body:", req.body);
 
@@ -32,7 +39,7 @@ module.exports = {
         machineName,
         planShift,
         planReason,
-        actualDate,
+        formattedActualDate,
         status,
       ]);
       const userData = userDataQuery.rows;
@@ -65,7 +72,7 @@ module.exports = {
             INSERT INTO tb_m_master_schedules ( line_id, line_nm, machine_id, machine_nm, last_krs, shift, period_nm, period_val, reason)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
           `;
-          const newLastKrs = actualDate;
+          const newLastKrs = formattedActualDate;
           const insertMasterScheduleValues = [
             lineId,
             lineName,
