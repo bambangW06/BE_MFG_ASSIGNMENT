@@ -8,6 +8,11 @@ const cookieParser = require("cookie-parser");
 const logger = require("morgan");
 
 const app = express();
+app.use((req, res, next) => {
+  console.log(`[REQ] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 const uploadPath = path.join(__dirname, "uploads");
 
 // Konfigurasi multer untuk penyimpanan file
